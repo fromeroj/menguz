@@ -3,9 +3,11 @@
 package config
 
 import (
+	"bufio"
 	"flag"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,7 +62,37 @@ func getenv(key, def string) string {
 	return def
 }
 
+// loadDotEnv reads KEY=VALUE pairs from .env (same dir the binary runs in)
+// and sets them ONLY when the variable is not already defined in the real
+// environment — so `make run`, systemd or a bare binary start all pick up
+// DEEPSEEK_API_KEY etc. without shell sourcing. Lines like KEY="v" and
+// comments (#) are handled; malformed lines are skipped.
+func loadDotEnv() {
+	f, err := os.Open(".env")
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		v = strings.Trim(v, `"'`)
+		if k != "" && os.Getenv(k) == "" {
+			_ = os.Setenv(k, v)
+		}
+	}
+}
+
 func parse() *Config {
+	loadDotEnv()
 	c := &Config{}
 	fs := flag.NewFlagSet("menguz-server", flag.ExitOnError)
 	fs.IntVar(&c.Port, "port", 8080, "HTTP port")
