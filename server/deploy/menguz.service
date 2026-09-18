@@ -1,0 +1,34 @@
+# menguz.service — systemd unit for the Menguz platform.
+# Install: cp deploy/menguz.service /etc/systemd/system/ && systemctl enable --now menguz
+[Unit]
+Description=Menguz Digital Platform (storefront + admin + API)
+After=network.target
+
+[Service]
+Type=simple
+User=menguz
+WorkingDirectory=/opt/menguz
+EnvironmentFile=/opt/menguz/.env
+ExecStart=/opt/menguz/menguz-server \
+  --port=${PORT} \
+  --badger-path=${BADGER_PATH} \
+  --sqlite-path=${SQLITE_PATH} \
+  --data-dir=${DATA_DIR} \
+  --static-dir=${STATIC_DIR} \
+  --sae-host=${SAE_HOST} \
+  --sae-port=${SAE_PORT} \
+  --sae-user=${SAE_USER} \
+  --sae-pass=${SAE_PASS} \
+  --sae-db=${SAE_DB} \
+  --sync-at=${SYNC_AT}
+Restart=always
+RestartSec=5
+# hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/menguz/data
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

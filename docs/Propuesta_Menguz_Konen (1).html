@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Propuesta Técnica-Comercial — Menguz × Konen.guru</title>
+<style>
+  @page { size: A4; margin: 2.5cm; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+  h1 {
+    font-size: 24pt;
+    font-weight: 700;
+    color: #7B1F3A;
+    border-bottom: 3px solid #7B1F3A;
+    padding-bottom: 10px;
+    margin-top: 0;
+  }
+  h2 {
+    font-size: 16pt;
+    font-weight: 600;
+    color: #7B1F3A;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    border-left: 4px solid #7B1F3A;
+    padding-left: 12px;
+  }
+  h3 {
+    font-size: 13pt;
+    font-weight: 600;
+    color: #333;
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+  h4 {
+    font-size: 11.5pt;
+    font-weight: 600;
+    color: #444;
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 13pt;
+    color: #666;
+    margin-bottom: 30px;
+  }
+  .meta-box {
+    background: #f8f5f6;
+    border: 1px solid #e0d5d9;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 10.5pt;
+  }
+  .meta-box strong { color: #7B1F3A; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 10.5pt;
+  }
+  th {
+    background: #7B1F3A;
+    color: white;
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+  }
+  td {
+    border-bottom: 1px solid #e0d5d9;
+    padding: 10px 12px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) { background: #faf8f9; }
+  .phase-header {
+    background: #f0e8eb !important;
+    font-weight: 700;
+    color: #7B1F3A;
+  }
+  .highlight {
+    background: #fff3cd;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .code-block {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+  .code-block .comment { color: #6a9955; }
+  .code-block .keyword { color: #569cd6; }
+  .code-block .string { color: #ce9178; }
+  .code-block .func { color: #dcdcaa; }
+  .divider {
+    border: none;
+    border-top: 2px dashed #ccc;
+    margin: 40px 0;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  ul { margin: 8px 0; padding-left: 24px; }
+  li { margin-bottom: 4px; }
+  .badge {
+    display: inline-block;
+    background: #7B1F3A;
+    color: white;
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
+  .note {
+    border-left: 3px solid #7B1F3A;
+    background: #fdf6f8;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: 10.5pt;
+    color: #444;
+  }
+  .anexo-title {
+    text-align: center;
+    font-size: 20pt;
+    font-weight: 700;
+    color: #333;
+    margin: 60px 0 30px 0;
+    padding: 20px;
+    border: 2px solid #7B1F3A;
+    border-radius: 8px;
+  }
+  .diagram-img {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid #e0d5d9;
+    margin: 16px 0;
+  }
+  .diagram-caption {
+    text-align: center;
+    font-size: 10pt;
+    color: #888;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PARTE 1: PROPUESTA COMERCIAL ==================== -->
+
+<h1>Propuesta Técnica-Comercial</h1>
+<p class="subtitle">Transformación Digital — Menguz Vinos & Licores</p>
+
+<div class="meta-box">
+  <strong>De:</strong> Konen.guru — Automatización e IA para empresas en México<br>
+  <strong>Para:</strong> Menguz Vinos & Licores<br>
+  <strong>Fecha:</strong> Agosto 2026<br>
+  <strong>Duración estimada:</strong> 12 meses<br>
+  <strong>Modelo:</strong> Desarrollo ágil por fases con entregables mensuales
+</div>
+
+<h2>1. Resumen Ejecutivo</h2>
+<p>
+Esta propuesta describe el desarrollo de un <strong>ecosistema digital completo</strong> para Menguz Vinos & Licores, compuesto por un sitio de venta B2C mobile-first, un portal mayorista B2B, un CRM inteligente con análisis predictivo, un módulo de logística con tracking, un motor de campañas de mercadotecnia, y el <strong>Club de Mixología</strong> como producto de suscripción recurrente.
+</p>
+<p>
+La solución se despliega como <strong>un solo ejecutable</strong> en un servidor propio, sin dependencias de plataformas cloud propietarias, garantizando soberanía de datos, costos predecibles y simplicidad operativa.
+</p>
+
+<h2>2. Alcance del Proyecto</h2>
+
+<h3>2.1 Sistemas a desarrollar</h3>
+<table>
+  <tr>
+    <th style="width:30%">Sistema</th>
+    <th>Descripción</th>
+    <th style="width:18%">Mes de inicio</th>
+  </tr>
+  <tr>
+    <td><strong>Sitio Web B2C</strong></td>
+    <td>Catálogo de productos, carrito de compras, checkout con pasarela de pagos, diseño mobile-first. Inventario sincronizado con Aspel SAE 8.0.</td>
+    <td>Mes 1</td>
+  </tr>
+  <tr>
+    <td><strong>Editor de Campañas</strong></td>
+    <td>Panel administrativo para crear, programar y publicar banners promocionales (tipo "Producto del Mes") sin intervención de desarrollador.</td>
+    <td>Mes 1</td>
+  </tr>
+  <tr>
+    <td><strong>Chatbot IA</strong></td>
+    <td>Asistente conversacional en sitio web y WhatsApp. Recomienda productos, responde FAQ, da seguimiento de pedidos. Escalación a agente humano.</td>
+    <td>Mes 2</td>
+  </tr>
+  <tr>
+    <td><strong>Portal B2B</strong></td>
+    <td>Acceso por cliente con precios diferenciados según lista de SAE. Pedidos masivos, historial, facturación.</td>
+    <td>Mes 2</td>
+  </tr>
+  <tr>
+    <td><strong>CRM Inteligente</strong></td>
+    <td>Pipeline de ventas, historial 360° del cliente, segmentación automática. IA que sugiere ofertas personalizadas por patrón de compra.</td>
+    <td>Mes 3</td>
+  </tr>
+  <tr>
+    <td><strong>Motor de Campañas</strong></td>
+    <td>Automatización de marketing: abandono de carrito, reactivación, cumpleaños, cross-sell. Email + WhatsApp.</td>
+    <td>Mes 4</td>
+  </tr>
+  <tr>
+    <td><strong>Programa de Lealtad</strong></td>
+    <td>Acumulación de puntos Menguz, niveles (Bronce/Plata/Oro), canje de beneficios.</td>
+    <td>Mes 4</td>
+  </tr>
+  <tr>
+    <td><strong>Módulo de Logística</strong></td>
+    <td>Rutas de entrega, asignación a repartidores, tracking en tiempo real, confirmación con foto/firma.</td>
+    <td>Mes 5</td>
+  </tr>
+  <tr>
+    <td><strong>App para Repartidores</strong></td>
+    <td>Aplicación web progresiva (PWA) accesible desde el mismo servidor. Rutas optimizadas, entregas, cobros.</td>
+    <td>Mes 5</td>
+  </tr>
+  <tr>
+    <td><strong>Crédito y Cobranza</strong></td>
+    <td>Límites de crédito sincronizados con SAE, alertas de vencimiento, estados de cuenta en línea, recordatorios automáticos.</td>
+    <td>Mes 6</td>
+  </tr>
+  <tr>
+    <td><strong>Facturación CFDI 4.0</strong></td>
+    <td>Emisión de facturas electrónicas desde pedidos web y B2B, integración con PAC autorizado.</td>
+    <td>Mes 6</td>
+  </tr>
+  <tr>
+    <td><strong>Dashboard de BI</strong></td>
+    <td>KPIs en tiempo real: rotación por SKU, rentabilidad por cliente, predicción de demanda, cohortes de suscripción.</td>
+    <td>Mes 8</td>
+  </tr>
+  <tr>
+    <td><strong>Alertas de Caducidad</strong></td>
+    <td>Control de lotes desde SAE, alertas progresivas (30/60/90 días), sugerencias de promociones para liquidar stock.</td>
+    <td>Mes 8</td>
+  </tr>
+  <tr>
+    <td><strong>Club de Mixología</strong></td>
+    <td>Suscripción mensual: curaduría de botellas, recetas generadas por IA, guías de maridaje, contenido exclusivo.</td>
+    <td>Mes 9</td>
+  </tr>
+  <tr>
+    <td><strong>Eventos y Catas</strong></td>
+    <td>Cotizador en línea para eventos privados, bodas, catas corporativas. Calendario, pagos, contrato digital.</td>
+    <td>Mes 10</td>
+  </tr>
+  <tr>
+    <td><strong>Integración Marketplaces</strong></td>
+    <td>Sync bidireccional de inventario y pedidos con Rappi, Uber Eats, Didi Food.</td>
+    <td>Mes 10</td>
+  </tr>
+  <tr>
+    <td><strong>WhatsApp Commerce</strong></td>
+    <td>Catálogo completo, pedidos y pagos directamente desde WhatsApp.</td>
+    <td>Mes 11</td>
+  </tr>
+  <tr>
+    <td><strong>Realidad Aumentada</strong></td>
+    <td>Experiencia interactiva: apuntar el celular a una botella para ver recetas, notas de cata y temperatura ideal.</td>
+    <td>Mes 11</td>
+  </tr>
+</table>
+
+<h3>2.2 Desarrollos adicionales propuestos</h3>
+<ul>
+  <li><strong>Sistema de Referidos/Afiliados:</strong> Clientes y bartenders que traen nuevos compradores reciben comisiones automáticas.</li>
+  <li><strong>WhatsApp Business API integrado:</strong> Notificaciones de envío, cobranza y soporte desde el primer mes.</li>
+  <li><strong>Catálogo digital con RA:</strong> Diferenciador de marca que ningún competidor en el mercado mexicano ofrece actualmente.</li>
+</ul>
+
+<h2>3. Roadmap de 12 Meses</h2>
+
+<table>
+  <tr>
+    <th style="width:10%">Mes</th>
+    <th style="width:22%">Fase</th>
+    <th>Entregables Clave</th>
+  </tr>
+  <tr class="phase-header">
+    <td colspan="3">FASE 1 — Fundamentos & Venta Directa</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M1</span></td>
+    <td><strong>Cimientos</strong></td>
+    <td>Rediseño sitio B2C mobile-first. Sync diaria SAE 8.0 → servidor propio. Editor de campañas. Pasarela de pagos. Panel admin base.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M2</span></td>
+    <td><strong>Atención & B2B</strong></td>
+    <td>Chatbot IA con RAG. Portal B2B con precios por lista de SAE. Integración WhatsApp Business API.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M3</span></td>
+    <td><strong>CRM Base</strong></td>
+    <td>Exportación estructurada de datos para CRM. Pipeline de ventas. Vista 360° del cliente. Segmentación inicial.</td>
+  </tr>
+  <tr class="phase-header">
+    <td colspan="3">FASE 2 — Operación & Automatización</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M4</span></td>
+    <td><strong>Marketing</strong></td>
+    <td>Motor de campañas automatizadas. Programa de lealtad con puntos y niveles. A/B testing.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M5</span></td>
+    <td><strong>Logística</strong></td>
+    <td>Módulo de rutas y tracking. App PWA para repartidores. Confirmación de entrega con geolocalización.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M6</span></td>
+    <td><strong>Finanzas</strong></td>
+    <td>Módulo de crédito y cobranza sync con SAE. Facturación electrónica CFDI 4.0. Estados de cuenta en línea.</td>
+  </tr>
+  <tr class="phase-header">
+    <td colspan="3">FASE 3 — Inteligencia & Experiencia</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M7</span></td>
+    <td><strong>IA Predictiva</strong></td>
+    <td>CRM inteligente: IA sugiere ofertas personalizadas. Predicción de demanda por SKU. Alertas de churn.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M8</span></td>
+    <td><strong>Business Intelligence</strong></td>
+    <td>Dashboard BI completo. Alertas de caducidad y lotes. Sugerencias de promociones para liquidar stock.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M9</span></td>
+    <td><strong>Suscripción</strong></td>
+    <td>Club de Mixología MVP: suscripción mensual, curaduría de botellas, recetas IA, guías de maridaje.</td>
+  </tr>
+  <tr class="phase-header">
+    <td colspan="3">FASE 4 — Escalamiento & Diferenciación</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M10</span></td>
+    <td><strong>Nuevos Canales</strong></td>
+    <td>Sistema de eventos y catas (cotizador). Integración con marketplaces (Rappi, Uber Eats). Sistema de referidos.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M11</span></td>
+    <td><strong>Innovación</strong></td>
+    <td>WhatsApp Commerce completo. Catálogo con Realidad Aumentada. Chatbot v2 con voz e imágenes.</td>
+  </tr>
+  <tr>
+    <td><span class="badge">M12</span></td>
+    <td><strong>Maduración</strong></td>
+    <td>ML avanzado: precios dinámicos, predicción estacional. Documentación completa. Capacitación al equipo. Plan de soporte.</td>
+  </tr>
+</table>
+
+<h2>4. Metodología de Trabajo</h2>
+<p>
+Konen.guru opera bajo el <strong>Método de los Siete Puentes</strong>: auditar, priorizar, diseñar, construir, lanzar, documentar y optimizar. Cada mes se divide en sprints de una semana con entregables concretos.
+</p>
+<ul>
+  <li><strong>Semana 1:</strong> Planificación y diseño técnico del entregable del mes.</li>
+  <li><strong>Semana 2–3:</strong> Desarrollo activo con revisiones intermedias.</li>
+  <li><strong>Semana 4:</strong> Testing, ajustes, deploy a producción y documentación.</li>
+</ul>
+<p>
+Al final de cada mes se realiza una <strong>revisión de entregable</strong> con el equipo de Menguz para validar funcionalidad y definir prioridades del mes siguiente.
+</p>
+
+<h2>5. Requerimientos del Cliente para Iniciar</h2>
+
+<table>
+  <tr>
+    <th style="width:35%">Requerimiento</th>
+    <th>Detalle</th>
+    <th style="width:15%">Mes</th>
+  </tr>
+  <tr>
+    <td>Acceso al servidor SAE 8.0</td>
+    <td>IP, puerto Firebird (3050), credenciales de usuario de solo lectura.</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>Ruta del archivo .fdb</td>
+    <td>Ej: C:\Archivos Comunes\Aspel\SAE8.00\Empresa01\Datos\Empresa01.fdb</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>Configuración de multialmacén</td>
+    <td>¿Se manejan múltiples bodegas? ¿Cuáles?</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>Campos libres de productos</td>
+    <td>Contenido de INVE_CLIB01 (graduación, región, año, notas de cata).</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>Cuentas de pago</td>
+    <td>Credenciales MercadoPago/Stripe (modo test para desarrollo).</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>Dominio y VPS</td>
+    <td>Dominio registrado. VPS con 2GB RAM / 1 vCPU / 50GB SSD.</td>
+    <td>M1</td>
+  </tr>
+  <tr>
+    <td>API Key de OpenAI</td>
+    <td>Para desarrollo del chatbot IA.</td>
+    <td>M2</td>
+  </tr>
+  <tr>
+    <td>Cuenta WhatsApp Business</td>
+    <td>Cuenta verificada en Meta Business Manager.</td>
+    <td>M2</td>
+  </tr>
+  <tr>
+    <td>PAC para CFDI 4.0</td>
+    <td>Cuenta con Finkok, SwSapiens o PAC autorizado por el SAT.</td>
+    <td>M6</td>
+  </tr>
+</table>
+
+<h2>6. Consideraciones Legales y de Propiedad</h2>
+<ul>
+  <li>El código fuente es propiedad de <strong>Menguz Vinos & Licores</strong> una vez finalizado el proyecto.</li>
+  <li>Konen.guru entrega documentación técnica completa (runbooks, diagramas de arquitectura, guías de operación).</li>
+  <li>Se firma un acuerdo de confidencialidad (NDA) respecto a datos de clientes, precios y operación comercial.</li>
+  <li>El soporte post-entrega puede contratarse mensualmente con Konen.guru o transferirse al equipo interno de Menguz.</li>
+</ul>
+
+<hr class="divider">
+
+<!-- ==================== PARTE 2: ANEXO TÉCNICO ==================== -->
+
+<div class="anexo-title">ANEXO TÉCNICO<br><span style="font-size:14pt;font-weight:400;color:#666;">Arquitectura, Stack y Especificaciones de Implementación</span></div>
+
+<h2>A. Visión General de la Arquitectura</h2>
+<p>
+El sistema se construye como <strong>una única aplicación compilada en Go</strong> que incluye servidor HTTP, base de datos embebida, frontend estático y lógica de negocio. No requiere contenedores, orquestadores ni servicios cloud propietarios para operar.
+</p>
+
+<div class="note">
+<strong>Principio rector:</strong> Un solo binario ejecutable. Un solo directorio de datos. Un solo comando para deploy.
+</div>
+
+<h3>A.1 Diagrama de arquitectura</h3>
+<img src="diagram_architecture.png" alt="Diagrama de arquitectura del sistema" class="diagram-img">
+<p class="diagram-caption">Figura 1: Arquitectura de menguz-server — un solo binario con todos los módulos embebidos</p>
+
+<h2>B. Stack Tecnológico Detallado</h2>
+
+<table>
+  <tr>
+    <th style="width:22%">Capa</th>
+    <th style="width:28%">Tecnología</th>
+    <th>Versión / Justificación</th>
+  </tr>
+  <tr>
+    <td><strong>Lenguaje</strong></td>
+    <td>Go</td>
+    <td>1.23+. Binario nativo, concurrencia con goroutines, compilación cruzada, zero-dependency runtime.</td>
+  </tr>
+  <tr>
+    <td><strong>Framework HTTP</strong></td>
+    <td>Echo v4</td>
+    <td>Alto rendimiento, middleware extensible, validación de requests, manejo de errores estructurado.</td>
+  </tr>
+  <tr>
+    <td><strong>DB Operativa</strong></td>
+    <td>Badger (dgraph.io/badger)</td>
+    <td>Key-value LSM-tree embebido 100% Go. Escrituras concurrentes excelentes. Backup: copiar directorio.</td>
+  </tr>
+  <tr>
+    <td><strong>DB Analítica</strong></td>
+    <td>SQLite (modernc.org/sqlite)</td>
+    <td>Embebido, sin Cgo. SQL nativo para reportes, CRM queries, BI. Poblado por sync desde Badger.</td>
+  </tr>
+  <tr>
+    <td><strong>Frontend</strong></td>
+    <td>HTMX + Tailwind CSS</td>
+    <td>Zero JS framework. Interacciones vía AJAX que devuelven HTML parcial. Mobile-first. Embebido con //go:embed.</td>
+  </tr>
+  <tr>
+    <td><strong>Autenticación</strong></td>
+    <td>JWT (golang-jwt/jwt)</td>
+    <td>Tokens firmados con HS256. Refresh tokens rotativos almacenados en Badger.</td>
+  </tr>
+  <tr>
+    <td><strong>Hashing</strong></td>
+    <td>bcrypt</td>
+    <td>Contraseñas de usuarios con costo 12.</td>
+  </tr>
+  <tr>
+    <td><strong>Sync SAE</strong></td>
+    <td>nakagami/firebirdsql</td>
+    <td>Driver Go nativo para Firebird. Sin ODBC ni Cgo. Conexión directa al servidor SAE.</td>
+  </tr>
+  <tr>
+    <td><strong>Chatbot IA</strong></td>
+    <td>OpenAI GPT-4o + SSE</td>
+    <td>Server-Sent Events para streaming de respuestas. Contexto de catálogo via RAG.</td>
+  </tr>
+  <tr>
+    <td><strong>WhatsApp</strong></td>
+    <td>WhatsApp Business API (Meta)</td>
+    <td>Webhooks HTTP en Go. Catálogo, pedidos y notificaciones.</td>
+  </tr>
+  <tr>
+    <td><strong>Pagos</strong></td>
+    <td>MercadoPago + Stripe</td>
+    <td>SDKs oficiales en Go. Webhooks locales para confirmación de pago.</td>
+  </tr>
+  <tr>
+    <td><strong>Facturación</strong></td>
+    <td>Finkok / SwSapiens API</td>
+    <td>PAC autorizado por el SAT. Timbrado CFDI 4.0 vía HTTP desde Go.</td>
+  </tr>
+  <tr>
+    <td><strong>Mapas / Rutas</strong></td>
+    <td>Google Maps API</td>
+    <td>Geocodificación, distancias, optimización de rutas. Cliente HTTP en Go.</td>
+  </tr>
+  <tr>
+    <td><strong>Deploy</strong></td>
+    <td>Binary + systemd</td>
+    <td>scp del binario + restart del servicio. Backup con rsync del directorio de datos.</td>
+  </tr>
+</table>
+
+<h2>C. Estructura del Proyecto</h2>
+
+<div class="code-block">
+menguz/
+├── main.go                          # Entry point: init DBs, servidor, cron jobs
+├── Makefile                         # build, test, deploy, backup
+├── go.mod / go.sum
+│
+├── embed/
+│   └── static/                      # Assets embebidos en el binario
+│       ├── index.html
+│       ├── css/
+│       │   └── tailwind.css
+│       ├── js/
+│       │   ├── htmx.min.js
+│       │   └── app.js
+│       └── img/                     # Logo, iconos, favicon
+│
+├── internal/
+│   ├── badger/                      # Wrapper de Badger
+│   │   ├── store.go                 # Get, Put, Delete, PrefixScan, BatchWrite
+│   │   ├── keys.go                  # Esquema de keys (prefijos por entidad)
+│   │   └── backup.go                # Backup incremental del directorio de datos
+│   │
+│   ├── sqlite/                      # Conexión SQLite para analytics
+│   │   ├── connection.go            # Init, migraciones
+│   │   ├── analytics.go             # Queries de BI y CRM
+│   │   └── sync.go                  # Pipeline Badger → SQLite
+│   │
+│   ├── sae/                         # Conector Aspel SAE 8.0
+│   │   ├── client.go                # Conexión Firebird
+│   │   ├── sync.go                  # Cron diario: extrae y carga a Badger
+│   │   ├── models.go                # Structs de tablas SAE
+│   │   └── queries.go               # SQL de lectura (INVE01, CLIE01, FACT01...)
+│   │
+│   ├── api/                         # Handlers HTTP
+│   │   ├── router.go                # Definición de rutas Echo
+│   │   ├── product.go               # GET /api/products, /api/products/:id
+│   │   ├── order.go                 # POST /api/orders, GET /api/orders/:id
+│   │   ├── cart.go                  # Sesión de carrito
+│   │   ├── auth.go                  # Registro, login, logout, refresh
+│   │   ├── campaign.go              # CRUD campañas (admin)
+│   │   ├── b2b.go                   # Rutas exclusivas portal B2B
+│   │   ├── webhook.go               # Webhooks de pagos y WhatsApp
+│   │   └── dashboard.go             # Endpoints de datos para BI
+│   │
+│   ├── models/                      # Structs compartidos
+│   │   └── types.go
+│   │
+│   ├── chatbot/                     # Agente conversacional
+│   │   ├── agent.go                 # Orquestador de conversación
+│   │   ├── rag.go                   # Retrieval de contexto desde Badger
+│   │   ├── openai.go                # Cliente OpenAI con SSE
+│   │   └── guardrails.go            # Validaciones: precios, stock, políticas
+│   │
+│   ├── whatsapp/                    # Integración WhatsApp Business
+│   │   ├── webhook.go               # Receptor de eventos Meta
+│   │   ├── sender.go                # Emisor de mensajes
+│   │   └── catalog.go               # Catálogo en formato WhatsApp
+│   │
+│   ├── payments/                    # Pasarelas de pago
+│   │   ├── mercadopago.go
+│   │   ├── stripe.go
+│   │   └── webhook.go
+│   │
+│   ├── logistics/                   # Módulo de logística
+│   │   ├── routes.go                # Optimización de rutas
+│   │   ├── tracking.go              # Estado de entregas
+│   │   └── delivery.go              # Asignación a repartidores
+│   │
+│   ├── crm/                         # Lógica de CRM
+│   │   ├── pipeline.go              # Estados del pipeline
+│   │   ├── scoring.go               # Segmentación y scoring
+│   │   └── predictions.go           # Modelos simples de predicción
+│   │
+│   ├── middleware/                  # Middleware HTTP
+│   │   ├── auth.go                  # JWT validation
+│   │   ├── cors.go
+│   │   ├── logger.go
+│   │   └── ratelimit.go
+│   │
+│   └── config/                      # Configuración
+│       ├── config.go                # Variables de entorno
+│       └── flags.go                 # CLI flags
+│
+├── migrations/                      # Schema inicial SQLite
+│   └── 001_init.sql
+│
+└── scripts/
+    ├── deploy.sh                    # scp + systemd restart
+    ├── backup.sh                    # rsync del dir de datos
+    └── restore.sh                   # Restauración desde backup
+</div>
+
+<h2>D. Modelo de Datos en Badger (Key-Value)</h2>
+<p>
+Badger es una base de datos key-value. El esquema se implementa mediante <strong>prefijos jerárquicos</strong> que permiten escaneos por rango (PrefixScan).
+</p>
+
+<img src="diagram_kv_schema.png" alt="Esquema de keys en Badger" class="diagram-img">
+<p class="diagram-caption">Figura 2: Convención de keys en Badger — prefijos jerárquicos para escaneos rápidos</p>
+
+<h4>D.1 Estructura de un producto (JSON value)</h4>
+<div class="code-block">
+{
+  "cve_art": "TEQ-DONJUL-001",
+  "nombre": "Tequila Don Julio Añejo",
+  "descripcion": "Tequila 100% agave añejo...",
+  "precio_base": 1250.00,
+  "precio_lista_1": 1187.50,
+  "precio_lista_2": 1125.00,
+  "existencia": 45,
+  "unidad_medida": "BOT-750ML",
+  "linea": "TEQUILA",
+  "sublinea": "AÑEJO",
+  "graduacion": "38%",
+  "origen": "Jalisco, México",
+  "imagen_url": "/static/img/products/teq-donjul-001.jpg",
+  "activo": true,
+  "ultima_sync": "2026-08-24T03:00:00Z"
+}
+</div>
+
+<h2>E. Sync SAE 8.0 → Badger</h2>
+
+<h4>E.1 Tablas de origen en Firebird</h4>
+<table>
+  <tr><th>Tabla SAE</th><th>Datos extraídos</th><th>Destino Badger</th></tr>
+  <tr><td>INVE01</td><td>Catálogo de productos, existencias, precios base</td><td>producto:{cve_art}</td></tr>
+  <tr><td>INVE_CLIB01</td><td>Campos libres (graduación, notas de cata, etc.)</td><td>Enriquece producto:{cve_art}</td></tr>
+  <tr><td>CLIE01</td><td>Clientes, RFC, dirección, lista de precios asignada</td><td>cliente:{id}</td></tr>
+  <tr><td>PROV01</td><td>Proveedores</td><td>proveedor:{id}</td></tr>
+  <tr><td>FACT01 / FACTD01</td><td>Facturas de venta (encabezado y detalle)</td><td>factura:{id} (para CRM/BI)</td></tr>
+  <tr><td>CUEN_M01</td><td>Cuentas por cobrar, saldos, vencimientos</td><td>cuenta:{id} (para cobranza)</td></tr>
+  <tr><td>PRECIO_X01</td><td>Listas de precios por cliente o volumen</td><td>precio_lista:{cliente_id}:{cve_art}</td></tr>
+</table>
+
+<h4>E.2 Flujo de la sync</h4>
+
+<img src="diagram_sync_flow.png" alt="Flujo de sincronización SAE a Badger" class="diagram-img">
+<p class="diagram-caption">Figura 3: Pipeline de sync diaria — Aspel SAE 8.0 a Badger vía Go</p>
+
+<h4>E.3 Consideraciones de seguridad</h4>
+<ul>
+  <li>Usuario Firebird de <strong>solo lectura</strong> (rol SELECT exclusivo).</li>
+  <li>Conexión por VPN o IP whitelist entre el VPS y el servidor de Menguz.</li>
+  <li>La sync corre en horario de baja demanda (03:00 AM).</li>
+  <li>Backup automático del directorio de datos de Badger antes de cada sync.</li>
+</ul>
+
+<h2>F. Frontend Mobile-First</h2>
+
+<h4>F.1 Enfoque de diseño</h4>
+<ul>
+  <li><strong>Base:</strong> 375px (iPhone SE / dispositivos Android entry-level)</li>
+  <li><strong>Breakpoints:</strong> sm:640px, md:768px, lg:1024px, xl:1280px</li>
+  <li><strong>Touch targets:</strong> Mínimo 44×44px en todos los controles interactivos</li>
+  <li><strong>Navegación móvil:</strong> Bottom navigation bar fija con 4 acciones principales</li>
+  <li><strong>Carrito:</strong> Slide-up panel desde la parte inferior (no página aparte)</li>
+  <li><strong>Checkout:</strong> Wizard de pasos con indicador de progreso</li>
+  <li><strong>Imágenes:</strong> Lazy loading, formatos WebP con fallback JPEG</li>
+</ul>
+
+<h4>F.2 Tecnología: HTMX + Tailwind</h4>
+<p>
+HTMX permite interacciones dinámicas sin un framework JavaScript pesado. Cada acción (añadir al carrito, filtrar, aplicar cupón) es un request HTTP que el servidor responde con HTML parcial, que HTMX inserta en el DOM.
+</p>
+<div class="code-block">
+&lt;!-- Ejemplo: añadir al carrito --&gt;
+&lt;button hx-post="/api/cart/add" 
+        hx-target="#cart-count"
+        hx-swap="innerHTML"
+        class="w-full bg-[#7B1F3A] text-white py-3 rounded-lg"&gt;
+  Añadir al carrito
+&lt;/button&gt;
+
+&lt;!-- El servidor responde con: --&gt;
+&lt;span id="cart-count"&gt;3&lt;/span&gt;
+</div>
+
+<h4>F.3 Embebido en el binario</h4>
+<div class="code-block">
+<span class="comment">//go:embed static/*</span>
+var staticFS embed.FS
+
+<span class="comment">// En main.go:</span>
+echo.StaticFS(<span class="string">"/static"</span>, echo.MustSubFS(staticFS, <span class="string">"static"</span>))
+</div>
+
+<h2>G. Seguridad</h2>
+
+<table>
+  <tr><th>Capa</th><th>Medida</th></tr>
+  <tr><td>Transporte</td><td>TLS 1.3 vía Let's Encrypt (auto-renewal con lego o Caddy reverse proxy)</td></tr>
+  <tr><td>Autenticación</td><td>JWT con expiración de 15 minutos. Refresh tokens de 7 días rotativos.</td></tr>
+  <tr><td>Contraseñas</td><td>bcrypt con costo 12. Nunca en texto plano.</td></tr>
+  <tr><td>Rate limiting</td><td>Middleware por IP (100 req/min) y por usuario (20 req/min en checkout)</td></tr>
+  <tr><td>Validación</td><td>Todas las entradas validadas con go-playground/validator</td></tr>
+  <tr><td>Headers</td><td>CSP, HSTS, X-Frame-Options, X-Content-Type-Options configurados</td></tr>
+  <tr><td>Logs</td><td>Auditoría de acciones críticas (login, cambio de precio, facturación)</td></tr>
+  <tr><td>Backup</td><td>rsync diario del directorio de datos a storage secundario</td></tr>
+</table>
+
+<h2>H. Deploy y Operación</h2>
+
+<h4>H.1 Proceso de deploy</h4>
+<div class="code-block">
+<span class="comment"># En máquina de desarrollo</span>
+$ make build
+  → Genera binario: ./bin/menguz-server (Linux AMD64)
+
+<span class="comment"># En VPS de producción</span>
+$ make deploy
+  → scp bin/menguz-server root@vps:/opt/menguz/
+  → ssh root@vps "systemctl restart menguz"
+
+<span class="comment"># Backup</span>
+$ make backup
+  → rsync -avz /opt/menguz/data/ backup-server:/backups/menguz/$(date +%Y%m%d)/
+</div>
+
+<h4>H.2 Servicio systemd</h4>
+<div class="code-block">
+<span class="comment"># /etc/systemd/system/menguz.service</span>
+[Unit]
+Description=Menguz Digital Platform
+After=network.target
+
+[Service]
+Type=simple
+User=menguz
+WorkingDirectory=/opt/menguz
+ExecStart=/opt/menguz/menguz-server     --port=8080     --badger-path=/opt/menguz/data/badger     --sqlite-path=/opt/menguz/data/analytics.db     --sae-host=192.168.1.100     --sae-db=/ruta/Empresa01.fdb
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+</div>
+
+<h4>H.3 Requisitos del servidor</h4>
+<table>
+  <tr><th>Recurso</th><th>Mínimo</th><th>Recomendado</th></tr>
+  <tr><td>CPU</td><td>1 vCPU</td><td>2 vCPU</td></tr>
+  <tr><td>RAM</td><td>2 GB</td><td>4 GB</td></tr>
+  <tr><td>Disco</td><td>50 GB SSD</td><td>100 GB SSD</td></tr>
+  <tr><td>OS</td><td>Ubuntu 22.04 LTS</td><td>Ubuntu 24.04 LTS</td></tr>
+  <tr><td>Red</td><td colspan="2">IP pública estática, puertos 80/443/22 abiertos</td></tr>
+</table>
+<p>
+<strong>Estimación de costo mensual de infraestructura:</strong> $6–12 USD/mes en DigitalOcean, Hetzner o Vultr.
+</p>
+
+<h2>I. Dependencias Externas y APIs</h2>
+
+<table>
+  <tr><th>Servicio</th><th>Uso</th><th>Costo estimado</th></tr>
+  <tr><td>OpenAI API (GPT-4o)</td><td>Chatbot IA, generación de recetas Club de Mixología</td><td>~$20–50 USD/mes según volumen</td></tr>
+  <tr><td>WhatsApp Business API (Meta)</td><td>Mensajes conversacionales y notificaciones</td><td>~$0.005–0.04 USD por conversación</td></tr>
+  <tr><td>MercadoPago / Stripe</td><td>Pasarela de pagos</td><td>Comisión por transacción (no costo fijo)</td></tr>
+  <tr><td>Google Maps API</td><td>Geocodificación, rutas de entrega</td><td>~$5–20 USD/mes</td></tr>
+  <tr><td>PAC (Finkok / SwSapiens)</td><td>Timbrado CFDI 4.0</td><td>~$0.50–1.50 USD por timbre</td></tr>
+  <tr><td>VPS / Hosting</td><td>Servidor de producción</td><td>~$6–12 USD/mes</td></tr>
+</table>
+
+<h2>J. Ventajas de esta Arquitectura</h2>
+
+<table>
+  <tr><th>Ventaja</th><th>Descripción</th></tr>
+  <tr><td><strong>Deploy trivial</strong></td><td>Un solo archivo ejecutable. scp + systemctl restart. Sin Docker, sin Kubernetes.</td></tr>
+  <tr><td><strong>Costos predecibles</strong></td><td>No hay bills sorpresa de cloud. VPS fijo + APIs de uso.</td></tr>
+  <tr><td><strong>Soberanía de datos</strong></td><td>Todo vive en el servidor de Menguz. Sin dependencia de Firebase, AWS o Google.</td></tr>
+  <tr><td><strong>Alta performance</strong></td><td>Go compila a binario nativo. Badger es LSM-tree optimizado para lecturas.</td></tr>
+  <tr><td><strong>Backup simple</strong></td><td>Copiar un directorio. Restaurar: copiar de vuelta y reiniciar.</td></tr>
+  <tr><td><strong>Mobile-first nativo</strong></td><td>HTMX + Tailwind genera HTML ligero. Carga rápida en 3G/4G mexicano.</td></tr>
+  <tr><td><strong>Escalable</strong></td><td>Go maneja miles de conexiones concurrentes. Si crece, se replica el binario con un load balancer.</td></tr>
+</table>
+
+<h2>K. Riesgos y Mitigaciones</h2>
+
+<table>
+  <tr><th>Riesgo</th><th>Mitigación</th></tr>
+  <tr><td>Badger es single-node</td><td>Backup diario automatizado. Si se necesita HA futura, migración a PostgreSQL es posible sin reescribir la lógica de negocio.</td></tr>
+  <tr><td>Consultas complejas en Badger</td><td>SQLite analítica como capa de lectura para CRM y BI. Badger para operación en vivo.</td></tr>
+  <tr><td>Equipo de Menguz no conoce Go</td><td>Documentación completa + capacitación en M12. Soporte mensual opcional con Konen.guru.</td></tr>
+  <tr><td>SAE bloquea conexión externa</td><td>Agente de sync en el servidor local de Menguz que empuja datos al VPS vía HTTPS.</td></tr>
+  <tr><td>Crecimiento de datos</td><td>Badger soporta terabytes. Compresión LZ4/Snappy activa. Garbage collection de valores obsoletos.</td></tr>
+</table>
+
+<div class="note">
+<strong>Nota final:</strong> Esta arquitectura prioriza la simplicidad operativa y la soberanía de datos. Cada decisión técnica está orientada a que Menguz posea, comprenda y opere su plataforma sin depender de infraestructuras propietarias complejas.
+</div>
+
+</body>
+</html>

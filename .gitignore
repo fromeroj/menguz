@@ -1,0 +1,16 @@
+# Binaries & data
+bin/
+data/
+*.bak
+
+# Env
+.env
+
+# Frontend
+node_modules/
+design/app/node_modules/
+design/app/dist/
+
+# OS / editor
+.DS_Store
+*.log

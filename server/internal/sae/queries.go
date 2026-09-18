@@ -1,0 +1,44 @@
+package sae
+
+// Firebird queries against Aspel SAE 8.0.
+//
+// The SAE dictionary can be inspected with:
+//
+//	SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS
+//	WHERE RDB$RELATION_NAME = 'INVE01' ORDER BY RDB$FIELD_POSITION;
+//
+// Adjust the column lists below to the actual installation before going live.
+
+const qProductos = `
+SELECT
+  TRIM(i.CVE_ART), TRIM(i.DESCR), COALESCE(TRIM(i.DESCR2), ''),
+  TRIM(i.LIN_ART), TRIM(i.UNI_MED), COALESCE(i.EXIST, 0),
+  COALESCE(i.PRECIO1, 0), COALESCE(i.PRECIO2, 0), COALESCE(i.PRECIO3, 0),
+  COALESCE(TRIM(c.CAMPLIB1), ''), COALESCE(TRIM(c.CAMPLIB2), ''), COALESCE(TRIM(c.CAMPLIB3), ''),
+  TRIM(i.STATUS)
+FROM INVE01 i
+LEFT JOIN INVE_CLIB01 c ON c.CLAVE = i.CVE_ART
+WHERE i.STATUS = 'A'`
+
+const qClientes = `
+SELECT
+  TRIM(CLAVE), TRIM(NOMBRE), TRIM(RFC),
+  COALESCE(TRIM(CALLE), ''), COALESCE(TRIM(COLONIA), ''), COALESCE(TRIM(CIUDAD), ''),
+  COALESCE(TRIM(ESTADO), ''), COALESCE(TRIM(CODIGO), ''), COALESCE(TRIM(TELEFONO), ''),
+  COALESCE(TRIM(E_MAIL), ''), COALESCE(LISTA_PREC, 1), COALESCE(LIM_CRED, 0), COALESCE(SALDO, 0)
+FROM CLIE01
+WHERE STATUS = 'A'`
+
+// Last 24 months of sales history (enough for CRM frequency & BI baselines).
+const qFacturas = `
+SELECT FIRST 5000
+  TRIM(f.CVE_DOC), TRIM(f.CLAVE_CLIE), f.FECHA_DOC, f.IMPORTE
+FROM FACT01 f
+WHERE f.TIPO_DOC IN ('F', 'R') AND f.STATUS <> 'C'
+  AND f.FECHA_DOC >= DATEADD(-24 MONTH TO CURRENT_DATE)
+ORDER BY f.FECHA_DOC DESC`
+
+const qFacturaDetalle = `
+SELECT TRIM(CVE_ART), CANT, PREC
+FROM FACTD01
+WHERE CVE_DOC = ?`
