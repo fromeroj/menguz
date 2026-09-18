@@ -4,6 +4,7 @@ import Promociones from '@/sections/Promociones'
 import ValueProps from '@/sections/ValueProps'
 import Especiales from '@/sections/Especiales'
 import ProductoDelMes from '@/sections/ProductoDelMes'
+import Sommelier from '@/sections/Sommelier'
 import CasaDragones from '@/sections/CasaDragones'
 import Catalogo from '@/sections/Catalogo'
 import Eventos from '@/sections/Eventos'
@@ -20,6 +21,7 @@ export default function Home() {
       <ValueProps />
       <Especiales />
       <ProductoDelMes />
+      <Sommelier />
       <CasaDragones />
       <Catalogo />
       <Eventos />

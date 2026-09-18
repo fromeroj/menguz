@@ -1,0 +1,2083 @@
+openapi: 3.0.3
+info:
+  title: Menguz API
+  description: |
+    API HTTP de la plataforma **Menguz Vinos & Licores**: tienda en línea (B2C),
+    portal mayorista (B2B), panel de administración (JWT), chatbot, sommelier IA
+    (SSE) y webhooks de WhatsApp Business (Meta).
+
+    La documentación interactiva Swagger UI se sirve embebida en el propio binario
+    en `/docs` y la especificación en `/openapi.yaml`.
+
+    - **Autenticación admin:** `POST /api/auth/login` con correo/contraseña del
+      administrador; devuelve `access_token` (JWT HS256, 15 min por defecto) y
+      `refresh_token` rotativo de un solo uso (7 días). Envia el access token como
+      `Authorization: Bearer <token>` en el grupo `/api/admin/*` (roles `admin` y
+      `ventas`).
+    - **Autenticación B2B:** `POST /api/b2b/login` con el correo del cliente SAE y
+      la contraseña del portal; el token (rol `b2b`) habilita `/api/b2b/*` y precia
+      el catálogo con la lista de precios SAE del cliente (1 = menudeo, 2 = medio
+      mayorista, 3 = vinatería).
+    - **Carrito:** se identifica por la cookie HttpOnly `mgz_cart` (7 días); el
+      servidor la crea automáticamente en la primera llamada.
+    - **Errores:** las respuestas de error usan el formato `{"message": "..."}`
+      (estándar de Echo), con los códigos documentados por operación.
+    - **Rate limiting:** límite global por IP en `/api/*`, `/admin/*`, `/data/*`
+      y `/webhooks/*`; buckets más estrictos en checkout y chat (429).
+    - **Panel HTML:** además de esta API JSON existe un panel de administración
+      renderizado en servidor (sesión por cookie) bajo `/admin` — fuera del
+      alcance de esta especificación, que cubre exclusivamente la API JSON.
+  version: 0.4.0
+  contact:
+    name: Darkvoice Center
+    url: https://darkvoice.center/
+  x-admin-panel:
+    tag: admin-panel
+    description: Panel de administración HTML (sesión por cookie) disponible en /admin — no forma parte de esta especificación JSON.
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+  - url: https://api.menguz.mx
+    description: Producción (placeholder — ajustar al dominio real)
+tags:
+  - name: Salud
+    description: Estado del servicio y metadatos.
+  - name: Catálogo
+    description: Productos, categorías y fichas de sommelier públicas (sincronizados desde Aspel SAE 8.0).
+  - name: Promociones
+    description: Campañas promocionales vigentes publicadas en el storefront.
+  - name: Carrito y Pedidos
+    description: Carrito por cookie, checkout con referencia de transferencia bancaria y rastreo de pedidos.
+  - name: Chatbot
+    description: Chatbot de atención al cliente con respuesta en streaming (SSE).
+  - name: Sommelier
+    description: Asesor de vinos IA (DeepSeek + inventario en vivo) con recomendaciones en streaming (SSE).
+  - name: Autenticación
+    description: Login/refresh/logout de administradores y acceso al portal B2B; emite JWT Bearer.
+  - name: Admin
+    description: 'API de administración protegida con JWT (roles `admin` | `ventas`): pedidos, campañas, clientes, sync, chat, CRM y fichas de producto.'
+  - name: B2B
+    description: 'API del portal mayorista protegida con JWT (rol `b2b`): perfil, catálogo con lista de precios SAE y pedidos.'
+  - name: Webhooks
+    description: 'Webhook de WhatsApp Business API (Meta): verificación y recepción de mensajes.'
+paths:
+  /healthz:
+    get:
+      tags: [Salud]
+      summary: Estado del servicio
+      description: Devuelve el estado del servicio, la versión del binario y la marca de la última sincronización SAE. Sin autenticación.
+      operationId: healthz
+      responses:
+        '200':
+          description: Servicio en operación.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string, example: ok}
+                  version: {type: string, example: 0.4.0}
+                  last_sync: {type: string, example: '2024-05-01T03:00:05Z'}
+                  time: {type: string, format: date-time, example: '2024-05-02T12:34:56Z'}
+  /data/products.json:
+    get:
+      tags: [Catálogo]
+      summary: Productos ligeros para el storefront
+      description: |
+        Arreglo plano de productos activos en el formato compacto que consume la
+        sección «Especiales» del storefront — claves cortas `n,p,c,g,i`
+        (nombre, precio efectivo, categoría, grupo, imagen sin `/` inicial).
+        Precio efectivo = `precio_oferta` cuando aplica, si no `precio_base`.
+        Sin autenticación.
+      operationId: dataProductsJSON
+      responses:
+        '200':
+          description: Lista de productos activos, ordenada por nombre.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductoPublicoLite'
+              example:
+                - {n: Malbec Reserva 2021, p: 489.0, c: Vino Tinto, g: Vinos, i: products/malbec-reserva.png}
+                - {n: Tequila Añejo 750ml, p: 720.0, c: Tequila, g: Licores, i: products/teq-anejo.png}
+  /api/products:
+    get:
+      tags: [Catálogo]
+      summary: Listar productos con búsqueda y filtros
+      description: |
+        Lista paginada de productos activos con búsqueda por texto
+        (nombre, descripción u origen) y filtros exactos de categoría y grupo.
+        Sin autenticación.
+      operationId: listProducts
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda libre (insensible a mayúsculas) sobre nombre, descripción y origen.
+          schema: {type: string, example: malbec}
+        - name: categoria
+          in: query
+          description: Filtro exacto de categoría (p. ej. `Vino Tinto`).
+          schema: {type: string, example: Vino Tinto}
+        - name: grupo
+          in: query
+          description: Filtro exacto de grupo (p. ej. `Vinos`, `Licores`).
+          schema: {type: string, example: Vinos}
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Página de productos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Producto'}}
+                  total: {type: integer, example: 187}
+                  page: {type: integer, example: 1}
+                  per_page: {type: integer, example: 24}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/products/{cve}:
+    get:
+      tags: [Catálogo]
+      summary: Detalle de un producto
+      description: Devuelve el producto completo junto con las campañas vigentes que lo referencian. Sin autenticación.
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/CveArt'
+      responses:
+        '200':
+          description: Producto con sus promociones vigentes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  producto: {$ref: '#/components/schemas/Producto'}
+                  promociones:
+                    type: array
+                    items: {$ref: '#/components/schemas/Campana'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/products/{cve}/perfil:
+    get:
+      tags: [Catálogo]
+      summary: Ficha de sommelier pública de un producto
+      description: |
+        Ficha curada (capa editorial) que alimenta al Sommelier IA: uvas, bodega,
+        región, notas de cata, maridaje, ocasiones y tags, más precio efectivo,
+        existencia e imagen en vivo. Sin autenticación.
+      operationId: publicPerfil
+      parameters:
+        - $ref: '#/components/parameters/CveArt'
+      responses:
+        '200':
+          description: Ficha completa del vino/licor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FichaVino'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/categories:
+    get:
+      tags: [Catálogo]
+      summary: Listar categorías con conteo
+      description: Categorías de productos activos con el grupo al que pertenecen y el número de productos en cada una. Sin autenticación.
+      operationId: listCategories
+      responses:
+        '200':
+          description: Lista ordenada por nombre.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Categoria'}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/promos:
+    get:
+      tags: [Promociones]
+      summary: Promociones vigentes
+      description: |
+        Campañas activas dentro de su vigencia, ordenadas por `orden` e inicio.
+        Si la campaña liga un producto, decora `precio_oferta` con el precio del
+        catálogo. Sin autenticación.
+      operationId: activePromos
+      parameters:
+        - name: tipo
+          in: query
+          description: Filtra por tipo de campaña.
+          schema: {type: string, enum: [carousel, producto_mes, especial]}
+      responses:
+        '200':
+          description: Campañas vigentes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Campana'}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/cart:
+    get:
+      tags: [Carrito y Pedidos]
+      summary: Ver carrito
+      description: |
+        Devuelve las partidas del carrito enriquecidas con datos en vivo del
+        catálogo (nombre, precio efectivo, existencia, importe) y el subtotal.
+        Crea la cookie HttpOnly `mgz_cart` (7 días) si aún no existe.
+        Sin autenticación.
+      operationId: getCart
+      responses:
+        '200':
+          description: Estado actual del carrito.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/CartLine'}
+                  subtotal: {type: number, example: 1458.0}
+                  count: {type: integer, example: 3}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/cart/items:
+    post:
+      tags: [Carrito y Pedidos]
+      summary: Agregar partida al carrito
+      description: |
+        Suma la cantidad indicada a la partida del producto (o la crea).
+        Rechaza productos inactivos/inexistentes y cantidades mayores a la
+        existencia. Requiere la cookie `mgz_cart` (se crea si falta).
+        Sin autenticación.
+      operationId: cartAdd
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cve_art, cantidad]
+              properties:
+                cve_art: {type: string, example: VIN-TIN-001}
+                cantidad: {type: number, example: 2, description: '1–500 (validate: gt=0, lte=500)'}
+      responses:
+        '200':
+          description: Partida agregada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean, example: true}
+                  count: {type: integer, example: 3, description: Número de partidas distintas en el carrito.}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/cart/items/{cve}:
+    delete:
+      tags: [Carrito y Pedidos]
+      summary: Quitar partida del carrito
+      description: Elimina la partida con la clave indicada del carrito de la cookie. Sin autenticación.
+      operationId: cartRemove
+      parameters:
+        - $ref: '#/components/parameters/CveArt'
+      responses:
+        '200':
+          description: Partida eliminada (o el carrito no existía).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean, example: true}
+                  count: {type: integer, example: 2}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/checkout:
+    post:
+      tags: [Carrito y Pedidos]
+      summary: Crear pedido B2C con referencia de transferencia
+      description: |
+        Convierte el carrito en una orden `b2c` con estado `pendiente_pago` y una
+        referencia de transferencia única (`MENG######`). Reserva existencia,
+        vacía el carrito y devuelve los datos bancarios para el pago. No hay
+        pasarela de tarjetas: el flujo B2C es por transferencia bancaria.
+        Protegido con rate limit estricto por IP.
+      operationId: checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email, telefono]
+              properties:
+                nombre: {type: string, minLength: 3, example: María Fernanda López}
+                email: {type: string, format: email, example: maria@example.com}
+                telefono: {type: string, minLength: 8, example: '5512345678'}
+                direccion: {type: string, example: Av. Reforma 123, CDMX}
+                notas: {type: string, example: Entregar después de las 6 pm}
+                envio: {type: number, example: 150.0, description: Costo de envío agregado al subtotal.}
+      responses:
+        '201':
+          description: Pedido creado en estado `pendiente_pago` con instrucciones de pago.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orden: {$ref: '#/components/schemas/Orden'}
+                  pago: {$ref: '#/components/schemas/PagoTransferencia'}
+        '400':
+          description: JSON inválido, carrito vacío, producto agotado/inexistente o existencia insuficiente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                carritoVacio: {value: {message: el carrito está vacío}}
+                sinExistencia: {value: {message: 'existencia insuficiente para Malbec Reserva 2021'}}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/orders/lookup:
+    get:
+      tags: [Carrito y Pedidos]
+      summary: Rastrear pedido por folio y correo
+      description: |
+        Permite al cliente consultar el estado de su pedido con el folio
+        (`MGZ-######`, recibido al hacer checkout) y el correo usado en la compra.
+        Ambos parámetros son obligatorios. Sin autenticación.
+      operationId: orderLookup
+      parameters:
+        - name: folio
+          in: query
+          required: true
+          schema: {type: string, example: MGZ-000042}
+        - name: email
+          in: query
+          required: true
+          schema: {type: string, format: email, example: maria@example.com}
+      responses:
+        '200':
+          description: Estado del pedido.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  folio: {type: string, example: MGZ-000042}
+                  estado: {$ref: '#/components/schemas/EstadoOrden'}
+                  total: {type: number, example: 1608.0}
+                  referencia_pago: {type: string, example: MENG000042}
+                  created_at: {type: string, format: date-time}
+                  items: {type: array, items: {$ref: '#/components/schemas/OrderItem'}}
+        '400':
+          description: Falta `folio` o `email`.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: folio y email son requeridos}
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/chat:
+    post:
+      tags: [Chatbot]
+      summary: Chatbot de atención al cliente (SSE)
+      description: |
+        Envía un mensaje del cliente y recibe la respuesta del chatbot como
+        stream de eventos (`text/event-stream`). Usa OpenAI (GPT) con RAG sobre
+        el catálogo cuando `OPENAI_API_KEY` está configurado; de lo contrario,
+        un motor determinista con las mismas salvaguardas. La conversación se
+        guarda con `canal=web` y es visible en la revisión de chat del admin.
+        Rate limit propio por IP.
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: {type: string, minLength: 1, maxLength: 2000, example: '¿Tienen Malbec de Valle de Guadalupe?'}
+                session_id: {type: string, description: ID de sesión previo (evento `session`); se genera si se omite.}
+      responses:
+        '200':
+          description: |
+            Stream SSE. Eventos:
+            - `session`: data = ID de sesión (reenvíalo como `session_id` en el siguiente mensaje).
+            - `delta`: fragmentos de texto de la respuesta, en orden.
+            - `done`: data = respuesta completa final.
+          content:
+            text/event-stream:
+              schema: {type: string}
+              example: |
+                event: session
+                data: chat_a1b2c3d4e5f6a7b8
+
+                event: delta
+                data: ¡Claro!
+
+                event: delta
+                data: Tenemos tres Malbec de Valle de Guadalupe…
+
+                event: done
+                data: ¡Claro! Tenemos tres Malbec de Valle de Guadalupe…
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/sommelier/chat:
+    post:
+      tags: [Sommelier]
+      summary: Sommelier IA con recomendaciones de producto (SSE)
+      description: |
+        Asesor de vinos estilo Hedonism: recibe el mensaje del usuario y
+        responde en streaming, conectando con el inventario en vivo. Usa
+        DeepSeek cuando `DEEPSEEK_API_KEY` está configurado; si no, un motor
+        determinista. Además de la respuesta, emite un evento `products` con las
+        tarjetas de los productos recomendados. La sesión se guarda con
+        `canal=sommelier`. Rate limit propio por IP.
+      operationId: sommelierChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: {type: string, minLength: 1, maxLength: 2000, example: '¿Qué vino me recomiendas para un asado con amigos?'}
+                session_id: {type: string, description: ID de sesión previo (evento `session`); se genera si se omite.}
+      responses:
+        '200':
+          description: |
+            Stream SSE. Eventos:
+            - `session`: data = ID de sesión.
+            - `delta`: fragmentos de texto, en orden.
+            - `products`: data = arreglo JSON de tarjetas de producto recomendado (solo si hubo recomendaciones).
+            - `done`: data = respuesta completa final.
+          content:
+            text/event-stream:
+              schema: {type: string}
+              example: |
+                event: session
+                data: somm_b2c3d4e5f6a7b8c9
+
+                event: delta
+                data: Para un asado te va a encantar…
+
+                event: products
+                data: [{"cve_art":"VIN-TIN-001","nombre":"Malbec Reserva 2021","precio":489.0,"existencia":12.0,"imagen":"products/malbec.png","categoria":"Vino Tinto","bodega":"Viñedos del Valle","uvas":["Malbec"],"anada":"2021","maridaje":"Carnes rojas a la parrilla"}]
+
+                event: done
+                data: Para un asado te va a encantar el Malbec Reserva…
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Login de administrador
+      description: |
+        Autentica un usuario del panel (roles `admin` | `ventas`) con correo y
+        contraseña. Devuelve el par de tokens y además fija las cookies
+        `mgz_token`, `mgz_refresh` y `csrf` para el panel HTML.
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email, example: admin@menguz.local}
+                password: {type: string, minLength: 6, example: s3cret0-muy-largo}
+      responses:
+        '200':
+          description: Tokens emitidos.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenResponse'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Credenciales inválidas.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: credenciales inválidas}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/refresh:
+    post:
+      tags: [Autenticación]
+      summary: Rotar tokens (access + refresh)
+      description: |
+        Consume un refresh token (de un solo uso; el anterior queda invalidado) y
+        devuelve un par nuevo. Acepta el token como campo de formulario
+        `refresh_token`, como query param `?refresh_token=` o en el cuerpo JSON.
+        Funciona tanto para usuarios admin como para clientes B2B.
+      operationId: refresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: {type: string, example: 9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890abcdef1234567890}
+      responses:
+        '200':
+          description: Nuevo par de tokens.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenResponse'}
+        '401':
+          description: Refresh inválido, expirado o identidad no encontrada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                invalido: {value: {message: refresh inválido}}
+                expirado: {value: {message: refresh expirado}}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión
+      description: |
+        Borra el refresh token asociado a la cookie `mgz_refresh` (best-effort) y
+        expira las cookies `mgz_token` y `mgz_refresh`. Sin autenticación.
+      operationId: logout
+      responses:
+        '204':
+          description: Sesión cerrada (sin cuerpo).
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/b2b/login:
+    post:
+      tags: [Autenticación]
+      summary: Login del portal B2B
+      description: |
+        Autentica un cliente SAE habilitado para el portal B2B (`b2b_enabled`,
+        con contraseña asignada por el admin). El access token resultante lleva
+        rol `b2b` y la lista de precios SAE del cliente, que se aplica en
+        `/api/b2b/catalog` y al crear pedidos.
+      operationId: b2bLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email, example: vinateria@cliente.mx}
+                password: {type: string, minLength: 6, example: clave-del-portal}
+      responses:
+        '200':
+          description: Tokens emitidos con `rol=b2b`.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TokenResponse'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Correo sin acceso B2B habilitado o contraseña incorrecta.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                noHabilitado: {value: {message: acceso B2B no habilitado para este correo}}
+                invalidas: {value: {message: credenciales inválidas}}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/orders:
+    get:
+      tags: [Admin]
+      summary: Listar pedidos
+      description: Lista todos los pedidos (B2C y B2B) ordenados del más reciente al más antiguo, con filtros opcionales por estado y tipo. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminListOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          description: Filtra por estado del pedido.
+          schema: {$ref: '#/components/schemas/EstadoOrden'}
+        - name: tipo
+          in: query
+          description: Filtra por tipo de pedido.
+          schema: {type: string, enum: [b2c, b2b]}
+      responses:
+        '200':
+          description: Lista de pedidos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Orden'}}
+                  total: {type: integer, example: 42}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/orders/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle de un pedido
+      description: Devuelve el pedido completo por su ID interno (`ord_…`). Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminGetOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Pedido completo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Orden'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/orders/{id}/status:
+    patch:
+      tags: [Admin]
+      summary: Cambiar estado de un pedido
+      description: |
+        Actualiza el estado del pedido. Si el nuevo estado es `cancelado`,
+        libera la existencia reservada. Recalcula analíticas.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminSetOrderStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado: {$ref: '#/components/schemas/EstadoOrden'}
+      responses:
+        '200':
+          description: Pedido actualizado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Orden'}
+        '400':
+          description: Estado inválido o JSON inválido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: estado inválido}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/campaigns:
+    get:
+      tags: [Admin]
+      summary: Listar campañas
+      description: Todas las campañas (activas e inactivas) ordenadas por última actualización. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminListCampaigns
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de campañas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Campana'}}
+                  total: {type: integer, example: 7}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [Admin]
+      summary: Crear campaña
+      description: |
+        Crea una campaña promocional (`carousel`, `producto_mes` o `especial`).
+        Fechas en RFC3339 o `YYYY-MM-DD`; `fin` debe ser posterior a `inicio`.
+        Si se liga `cve_art`, la clave debe existir en el catálogo.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminCreateCampaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CampanaInput'}
+      responses:
+        '201':
+          description: Campaña creada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Campana'}
+        '400':
+          description: JSON inválido, fechas inválidas, `fin` no posterior a `inicio` o `cve_art` inexistente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                fechas: {value: {message: fin debe ser posterior a inicio}}
+                cveArt: {value: {message: 'cve_art no existe en el catálogo: TEQ-XXX-000'}}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/campaigns/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle de campaña
+      description: Devuelve una campaña por ID. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminGetCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaña.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Campana'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    put:
+      tags: [Admin]
+      summary: Actualizar campaña
+      description: Reemplaza los campos editables de la campaña (mismas reglas de validación que al crear). Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminUpdateCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CampanaInput'}
+      responses:
+        '200':
+          description: Campaña actualizada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Campana'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      tags: [Admin]
+      summary: Eliminar campaña
+      description: Elimina la campaña de forma permanente. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminDeleteCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '204':
+          description: Campaña eliminada (sin cuerpo).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/campaigns/{id}/toggle:
+    patch:
+      tags: [Admin]
+      summary: Activar/desactivar campaña
+      description: Invierte el estado `activa` de la campaña. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminToggleCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Campaña con el nuevo estado.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Campana'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/clients:
+    get:
+      tags: [Admin]
+      summary: Listar clientes SAE
+      description: |
+        Clientes sincronizados desde CLIE01 de SAE (sin el hash de contraseña B2B),
+        ordenados por nombre, con búsqueda por nombre o correo.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminListClients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda insensible a mayúsculas por nombre o correo.
+          schema: {type: string, example: vinateria}
+      responses:
+        '200':
+          description: Lista de clientes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Cliente'}}
+                  total: {type: integer, example: 58}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/clients/{id}/b2b:
+    post:
+      tags: [Admin]
+      summary: Habilitar/deshabilitar acceso B2B de un cliente
+      description: |
+        Activa o desactiva el portal B2B del cliente y, opcionalmente, fija una
+        contraseña (mínimo 8 caracteres). Devuelve el cliente sin el hash.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminSetB2B
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente (clave SAE).
+          schema: {type: string, example: '00123'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: {type: boolean, example: true}
+                password: {type: string, example: claveB2B-2024, description: Nueva contraseña del portal (mínimo 8 caracteres); opcional.}
+      responses:
+        '200':
+          description: Cliente actualizado (sin `b2b_pass_hash`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Cliente'}
+        '400':
+          description: Contraseña menor a 8 caracteres o JSON inválido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: password mínimo 8 caracteres}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/sync:
+    post:
+      tags: [Admin]
+      summary: Disparar sincronización SAE
+      description: |
+        Lanza la sincronización de productos, clientes y facturas desde SAE
+        (Firebird o modo mock) de forma asíncrona; el resultado se registra en
+        la bitácora de sync. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminTriggerSync
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: Sincronización iniciada en segundo plano.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  started: {type: boolean, example: true}
+                  at: {type: string, format: date-time, example: '2024-05-02T12:34:56Z'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/sync/logs:
+    get:
+      tags: [Admin]
+      summary: Bitácora de sincronizaciones
+      description: Últimas 30 sincronizaciones, de la más reciente a la más antigua. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminSyncLogs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bitácora (máx. 30 entradas).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/SyncLog'}}
+                  total: {type: integer, example: 12}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/products/{cve}/perfil:
+    get:
+      tags: [Admin]
+      summary: Ficha de sommelier de un producto (admin)
+      description: Devuelve la ficha curada del producto junto con el producto del catálogo. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminGetPerfil
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CveArt'
+      responses:
+        '200':
+          description: Ficha y producto.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  perfil: {$ref: '#/components/schemas/PerfilVino'}
+                  producto: {$ref: '#/components/schemas/Producto'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    put:
+      tags: [Admin]
+      summary: Guardar ficha de sommelier
+      description: |
+        Crea o actualiza (upsert) la ficha curada del producto; el cuerpo es un
+        `PerfilVino` completo (`cve_art` se toma de la ruta). La ficha alimenta
+        al Sommelier IA y se conserva entre sincronizaciones SAE.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminSavePerfil
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CveArt'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PerfilVino'}
+      responses:
+        '200':
+          description: Ficha guardada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PerfilVino'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/perfiles/bootstrap:
+    post:
+      tags: [Admin]
+      summary: Generar fichas borrador
+      description: |
+        Genera fichas de sommelier borrador (tipo y uvas detectadas en el nombre)
+        para los productos sin ficha. No pisa las fichas editadas a mano.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminBootstrapPerfiles
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resultado del generador.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  creados: {type: integer, example: 23}
+                  actualizados: {type: integer, example: 4}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/chat/sessions:
+    get:
+      tags: [Admin]
+      summary: Listar conversaciones del chatbot
+      description: |
+        Sesiones de chat (canales `web`, `whatsapp`, `sommelier`) con un
+        preview de los últimos 3 mensajes, de la más reciente a la más antigua;
+        máximo 50. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminListChatSessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de conversaciones (máx. 50).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/ChatSession'}}
+                  total: {type: integer, example: 17}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/chat/sessions/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle de conversación
+      description: Transcript completo de una sesión de chat. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminGetChatSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Sesión completa con todos sus mensajes.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ChatSession'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/chat/sessions/{id}/resolve:
+    post:
+      tags: [Admin]
+      summary: Marcar conversación como resuelta
+      description: Quita la marca de escalado de la sesión tras la atención humana. Requiere JWT con rol `admin` o `ventas`.
+      operationId: adminResolveChatSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Sesión actualizada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ChatSession'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/stages:
+    get:
+      tags: [Admin]
+      summary: Etapas del pipeline
+      description: Lista fija de etapas del pipeline de ventas. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmPipelineStages
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Etapas en orden.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {type: string, enum: [nuevo, contactado, propuesta, ganado, perdido]}
+              example: [nuevo, contactado, propuesta, ganado, perdido]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/deals:
+    get:
+      tags: [Admin]
+      summary: Listar oportunidades (deals)
+      description: Oportunidades del pipeline ordenadas por última actualización, con filtro opcional por etapa. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmListDeals
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: etapa
+          in: query
+          description: Filtra por etapa del pipeline.
+          schema: {type: string, enum: [nuevo, contactado, propuesta, ganado, perdido]}
+      responses:
+        '200':
+          description: Lista de oportunidades.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Deal'}}
+                  total: {type: integer, example: 9}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [Admin]
+      summary: Crear oportunidad
+      description: Agrega una oportunidad al pipeline. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmCreateDeal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealInput'}
+      responses:
+        '201':
+          description: Oportunidad creada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Deal'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/deals/{id}:
+    put:
+      tags: [Admin]
+      summary: Actualizar oportunidad
+      description: Reemplaza los campos editables de la oportunidad. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmUpdateDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del deal (`deal_…`).
+          schema: {type: string, example: deal_a1b2c3d4e5f6a7b8}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DealInput'}
+      responses:
+        '200':
+          description: Oportunidad actualizada.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Deal'}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    delete:
+      tags: [Admin]
+      summary: Eliminar oportunidad
+      description: Elimina la oportunidad del pipeline. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmDeleteDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del deal (`deal_…`).
+          schema: {type: string, example: deal_a1b2c3d4e5f6a7b8}
+      responses:
+        '204':
+          description: Eliminada (sin cuerpo).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/customers:
+    get:
+      tags: [Admin]
+      summary: Listar clientes con métricas
+      description: |
+        Clientes con agregados de facturación histórica (SAE), última compra,
+        frecuencia mensual y número de pedidos web; ordenados por facturación.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmListCustomers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda por nombre, correo o ID de cliente.
+          schema: {type: string, example: vinateria}
+      responses:
+        '200':
+          description: Lista de clientes con métricas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/ClienteResumen'}}
+                  total: {type: integer, example: 58}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/customers/{id}:
+    get:
+      tags: [Admin]
+      summary: Vista 360 del cliente
+      description: |
+        Ficha completa del cliente: datos SAE, total facturado, última compra,
+        frecuencia, segmentos, hasta 24 facturas (encabezados) y sus pedidos web.
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmCustomer360
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del cliente (clave SAE).
+          schema: {type: string, example: '00123'}
+      responses:
+        '200':
+          description: Vista 360.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Customer360'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/segments:
+    get:
+      tags: [Admin]
+      summary: Catálogo de segmentos
+      description: |
+        Segmentos predefinidos del CRM con su descripción
+        (`alto_valor`, `sin_compra_90d`, `frecuente`, `con_saldo`, `b2b_activo`).
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmListSegments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mapa de segmento → descripción.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {type: string}
+                example:
+                  alto_valor: Clientes con más de $25,000 facturados (histórico SAE)
+                  sin_compra_90d: Clientes sin compra en los últimos 90 días
+                  frecuente: Clientes con 2+ compras al mes en promedio
+                  con_saldo: Clientes con saldo pendiente (cobranza)
+                  b2b_activo: Clientes con acceso al portal B2B
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/segments/{segmento}/members:
+    get:
+      tags: [Admin]
+      summary: Miembros de un segmento
+      description: Clientes que pertenecen al segmento indicado. Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmSegmentMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: segmento
+          in: path
+          required: true
+          description: ID del segmento.
+          schema: {type: string, enum: [alto_valor, sin_compra_90d, frecuente, con_saldo, b2b_activo]}
+      responses:
+        '200':
+          description: Miembros del segmento.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  segmento: {type: string, example: alto_valor}
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/ClienteResumen'}
+                  total: {type: integer, example: 6}
+        '400':
+          description: Segmento inválido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: 'segmento inválido: vip'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/crm/export/{kind}:
+    get:
+      tags: [Admin]
+      summary: Exportar CSV
+      description: |
+        Descarga un CSV para onboarding de CRM o herramientas externas:
+        `customers` (clientes), `orders` (pedidos web) o `deals` (pipeline).
+        Requiere JWT con rol `admin` o `ventas`.
+      operationId: crmExport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          description: Tipo de exportación.
+          schema: {type: string, enum: [customers, orders, deals]}
+      responses:
+        '200':
+          description: 'Archivo CSV (`text/csv; charset=utf-8`) con `Content-Disposition: attachment`.'
+          content:
+            text/csv:
+              schema: {type: string}
+              example: |
+                id,nombre,rfc,email,telefono,ciudad,lista_precio,saldo,total_facturado,ultima_compra
+                00123,Vinatería del Centro,VEC123456ABC,vinateria@cliente.mx,5551234567,CDMX,3,0.00,152430.00,2024-04-18
+        '400':
+          description: Tipo de exportación inválido.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: 'tipo de exportación inválido (customers|orders|deals)'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/b2b/me:
+    get:
+      tags: [B2B]
+      summary: Perfil del cliente autenticado
+      description: Devuelve los datos del cliente B2B (sin hash de contraseña) y su lista de precios SAE. Requiere JWT con rol `b2b`.
+      operationId: b2bMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cliente y lista de precios.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cliente: {$ref: '#/components/schemas/Cliente'}
+                  lista_precio: {type: integer, example: 3, description: 'Lista SAE asignada (1 = menudeo, 2 = medio mayorista, 3 = vinatería).'}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/b2b/catalog:
+    get:
+      tags: [B2B]
+      summary: Catálogo con precios del cliente
+      description: |
+        Catálogo completo de productos activos con el precio de la lista SAE del
+        cliente (`precio_cliente`): lista 2 usa `precio_lista_2`, lista 3 usa
+        `precio_lista_3` (con respaldo a precio base/oferta); búsqueda por nombre
+        y filtro por categoría. Requiere JWT con rol `b2b`.
+      operationId: b2bCatalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda insensible a mayúsculas por nombre.
+          schema: {type: string, example: malbec}
+        - name: categoria
+          in: query
+          description: Filtro exacto de categoría.
+          schema: {type: string, example: Vino Tinto}
+      responses:
+        '200':
+          description: Catálogo con precios del cliente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/B2BProducto'}}
+                  total: {type: integer, example: 187}
+                  lista_precio: {type: integer, example: 3}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/b2b/orders:
+    get:
+      tags: [B2B]
+      summary: Mis pedidos
+      description: Pedidos web del cliente autenticado, del más reciente al más antiguo. Requiere JWT con rol `b2b`.
+      operationId: b2bOrders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pedidos del cliente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Orden'}}
+                  total: {type: integer, example: 5}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [B2B]
+      summary: Crear pedido mayorista
+      description: |
+        Crea un pedido `b2b` con los precios de la lista SAE del cliente.
+        Reserva existencia (1 a 500 partidas) y arranca en estado `preparando`:
+        los clientes B2B pagan a crédito según sus condiciones SAE, sin referencia
+        de transferencia. Requiere JWT con rol `b2b`.
+      operationId: b2bCreateOrder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items: {$ref: '#/components/schemas/CartItem'}
+                direccion: {type: string, example: Bodega Central, Av. de las Industrias 45}
+                notas: {type: string, example: Surtido parcial permitido}
+      responses:
+        '201':
+          description: Pedido creado en estado `preparando`.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Orden'}
+        '400':
+          description: JSON inválido, más de 500 partidas, producto no disponible o existencia insuficiente.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                partidas: {value: {message: entre 1 y 500 partidas por pedido}}
+                agotado: {value: {message: 'existencia insuficiente: Malbec Reserva 2021'}}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /webhooks/whatsapp:
+    get:
+      tags: [Webhooks]
+      summary: Verificación del webhook (Meta)
+      description: |
+        Handshake de verificación de Meta WhatsApp Business API: responde con el
+        valor del query param `hub.challenge` cuando `hub.mode=subscribe` y
+        `hub.verify_token` coincide con la variable de entorno `WA_VERIFY_TOKEN`.
+      operationId: waVerify
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema: {type: string, example: subscribe}
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema: {type: string, example: mi-verify-token-secreto}
+        - name: hub.challenge
+          in: query
+          required: true
+          schema: {type: string, example: '1234567890'}
+      responses:
+        '200':
+          description: Verificación exitosa; cuerpo = valor de `hub.challenge` (texto plano).
+          content:
+            text/plain:
+              schema: {type: string, example: '1234567890'}
+        '403':
+          description: Token de verificación inválido o modo distinto (sin cuerpo).
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [Webhooks]
+      summary: Recepción de mensajes de WhatsApp (Meta)
+      description: |
+        Recibe los payloads de mensajes entrantes de Meta. Por cada mensaje de
+        texto ejecuta el chatbot (sesión `wa_<número>`), guarda la conversación y
+        reenvía la respuesta vía Graph API cuando `WA_ACCESS_TOKEN` está
+        configurado. Meta espera siempre 200, incluso ante payloads no parseables.
+      operationId: waReceive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                object: {type: string, example: whatsapp_business_account}
+                entry:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: {type: string, example: '123456789012345'}
+                      changes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            value:
+                              type: object
+                              properties:
+                                messaging_product: {type: string, example: whatsapp}
+                                metadata:
+                                  type: object
+                                  properties:
+                                    phone_number_id: {type: string, example: '109876543210'}
+                                messages:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      from: {type: string, example: '525512345678'}
+                                      id: {type: string, example: wamid.HBgNNTI1MTIzNDU2NzgVAgARGBI5OTk'}
+                                      type: {type: string, example: text}
+                                      text:
+                                        type: object
+                                        properties:
+                                          body: {type: string, example: 'Hola, ¿tienen Malbec?'}
+                                statuses:
+                                  type: array
+                                  items: {}
+      responses:
+        '200':
+          description: Payload recibido (siempre, incluso con JSON no parseable). Sin cuerpo.
+        '400':
+          description: Cuerpo ilegible (raro; Meta recibe 200 en la práctica).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT HS256 firmado con `JWT_SECRET`. Claims: `sub` (ID de usuario o
+        cliente), `email`, `rol` (`admin` | `ventas` | `b2b`), `lista` (lista de
+        precios SAE, solo B2B), `iss=menguz`. Access token 15 min (configurable);
+        rota con el refresh token de un solo uso vía `POST /api/auth/refresh`.
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Número de página (base 1).
+      schema: {type: integer, default: 1, minimum: 1}
+    PerPage:
+      name: per_page
+      in: query
+      description: Tamaño de página (1–100; fuera de rango se usa 24).
+      schema: {type: integer, default: 24, minimum: 1, maximum: 100}
+    CveArt:
+      name: cve
+      in: path
+      required: true
+      description: Clave de artículo SAE.
+      schema: {type: string, example: VIN-TIN-001}
+    OrderId:
+      name: id
+      in: path
+      required: true
+      description: ID interno del pedido (`ord_…`).
+      schema: {type: string, example: ord_a1b2c3d4e5f6a7b8}
+    CampaignId:
+      name: id
+      in: path
+      required: true
+      description: ID de la campaña (`camp_…`).
+      schema: {type: string, example: camp_a1b2c3d4e5f6a7b8}
+    SessionId:
+      name: id
+      in: path
+      required: true
+      description: ID de la sesión de chat.
+      schema: {type: string, example: chat_a1b2c3d4e5f6a7b8}
+  responses:
+    BadRequest:
+      description: Petición inválida (JSON mal formado, validación o regla de negocio).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: JSON inválido}
+    Unauthorized:
+      description: 'Falta el header `Authorization: Bearer` o el token es inválido/expirado.'
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          examples:
+            sinToken: {value: {message: token requerido}}
+            tokenInvalido: {value: {message: token inválido o expirado}}
+    Forbidden:
+      description: Token válido pero rol no autorizado para este grupo.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: rol no autorizado}
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: producto no encontrado}
+    TooManyRequests:
+      description: Límite de solicitudes excedido (rate limit por IP); reintentar más tarde.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: demasiadas solicitudes, intenta más tarde}
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: {type: string}
+    Producto:
+      type: object
+      description: Producto sincronizado desde Aspel SAE 8.0 (INVE01 + INVE_CLIB01).
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        nombre: {type: string, example: Malbec Reserva 2021}
+        descripcion: {type: string, example: Malbec de Valle de Guadalupe, 12 meses en roble.}
+        precio_base: {type: number, example: 489.0, description: Precio lista 1 (menudeo).}
+        precio_lista_2: {type: number, example: 439.0, description: Precio medio mayorista.}
+        precio_lista_3: {type: number, example: 399.0, description: Precio vinatería / B2B.}
+        precio_oferta: {type: number, example: 429.0, description: Override de precio desde campaña (omite si es 0).}
+        existencia: {type: number, example: 12.0}
+        unidad_medida: {type: string, example: PZA}
+        linea: {type: string, example: VINOS}
+        categoria: {type: string, example: Vino Tinto, description: Categoría de la tienda.}
+        grupo: {type: string, example: Vinos, description: Grupo de la tienda (Vinos, Licores…).}
+        graduacion: {type: string, example: 13.5%}
+        origen: {type: string, example: México}
+        notas_cata: {type: string, example: 'Color rubí intenso; nariz a frutos rojos y vainilla.'}
+        imagen_url: {type: string, example: /products/malbec-reserva.png}
+        activo: {type: boolean, example: true}
+        ultima_sync: {type: string, format: date-time}
+    ProductoPublicoLite:
+      type: object
+      description: Formato compacto para la sección Especiales del storefront (claves cortas).
+      properties:
+        n: {type: string, example: Malbec Reserva 2021}
+        p: {type: number, example: 489.0}
+        c: {type: string, example: Vino Tinto}
+        g: {type: string, example: Vinos}
+        i: {type: string, example: products/malbec-reserva.png, description: Ruta de imagen sin `/` inicial.}
+    Categoria:
+      type: object
+      properties:
+        nombre: {type: string, example: Vino Tinto}
+        grupo: {type: string, example: Vinos}
+        total: {type: integer, example: 42}
+    Campana:
+      type: object
+      description: Campaña promocional administrable; se publica sola en el storefront durante su vigencia.
+      properties:
+        id: {type: string, example: camp_a1b2c3d4e5f6a7b8}
+        titulo: {type: string, example: Semana del Malbec}
+        tipo: {type: string, enum: [carousel, producto_mes, especial], example: carousel}
+        imagen_url: {type: string, example: /img/promos/semana-malbec.jpg}
+        descripcion: {type: string, example: 15% de descuento en tintos seleccionados.}
+        cve_art: {type: string, example: VIN-TIN-001, description: Producto ligado (opcional).}
+        precio_oferta: {type: number, example: 429.0}
+        cta_texto: {type: string, example: Cotiza ahora}
+        cta_url: {type: string, example: /promociones}
+        wa_mensaje: {type: string, example: Hola, me interesa la promo Semana del Malbec}
+        inicio: {type: string, format: date-time, example: '2024-05-01T00:00:00Z'}
+        fin: {type: string, format: date-time, example: '2024-05-31T23:59:59Z'}
+        activa: {type: boolean, example: true}
+        orden: {type: integer, example: 10}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CampanaInput:
+      type: object
+      description: Cuerpo para crear/actualizar campaña (fechas como RFC3339 o YYYY-MM-DD).
+      required: [titulo, tipo, inicio, fin]
+      properties:
+        titulo: {type: string, minLength: 3, example: Semana del Malbec}
+        tipo: {type: string, enum: [carousel, producto_mes, especial], example: carousel}
+        imagen_url: {type: string, example: /img/promos/semana-malbec.jpg}
+        descripcion: {type: string, example: 15% de descuento en tintos seleccionados.}
+        cve_art: {type: string, example: VIN-TIN-001}
+        precio_oferta: {type: number, example: 429.0}
+        cta_texto: {type: string, example: Cotiza ahora}
+        cta_url: {type: string, example: /promociones}
+        wa_mensaje: {type: string, example: Hola, me interesa la promo}
+        inicio: {type: string, example: '2024-05-01', description: RFC3339 o YYYY-MM-DD.}
+        fin: {type: string, example: '2024-05-31', description: RFC3339 o YYYY-MM-DD (debe ser posterior a inicio).}
+        activa: {type: boolean, example: true}
+        orden: {type: integer, example: 10}
+    PerfilVino:
+      type: object
+      description: Ficha curada de sommelier (capa editorial sobre el producto SAE); se conserva entre syncs.
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        tipo: {type: string, example: Tinto, enum: [Tinto, Blanco, Rosado, Espumoso, Champagne, Licor, Otro]}
+        uvas: {type: array, items: {type: string}, example: [Malbec, Cabernet Sauvignon]}
+        bodega: {type: string, example: Viñedos del Valle}
+        region: {type: string, example: Valle de Guadalupe}
+        pais: {type: string, example: México}
+        anada: {type: string, example: '2021', description: Añada; vacío = sin añada (NV).}
+        graduacion: {type: string, example: 13.5%}
+        crianza: {type: string, example: Roble 6 meses}
+        notas_cata: {type: string, example: 'Color rubí; nariz a frutos rojos; boca tánica elegante.'}
+        maridaje: {type: string, example: Carnes rojas a la parrilla, quesos añejos}
+        descripcion: {type: string, example: Descripción editorial larga del vino.}
+        ocasiones: {type: array, items: {type: string}, example: [asado, regalo, celebración]}
+        tags: {type: array, items: {type: string}, example: [frutal, tánico, añejo]}
+        updated_at: {type: string, format: date-time}
+    FichaVino:
+      type: object
+      description: Ficha pública completa (identidad + precio efectivo + existencia + perfil curado).
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        nombre: {type: string, example: Malbec Reserva 2021}
+        categoria: {type: string, example: Vino Tinto}
+        tipo: {type: string, example: Tinto}
+        precio: {type: number, example: 489.0, description: Precio efectivo (oferta aplicada si aplica).}
+        existencia: {type: number, example: 12.0}
+        imagen: {type: string, example: products/malbec-reserva.png}
+        descripcion: {type: string, example: Descripción editorial o la del catálogo SAE.}
+        bodega: {type: string, example: Viñedos del Valle}
+        uvas: {type: array, items: {type: string}, example: [Malbec]}
+        region: {type: string, example: Valle de Guadalupe}
+        pais: {type: string, example: México}
+        anada: {type: string, example: '2021', description: '`sin añada (NV)` cuando no aplica.'}
+        graduacion: {type: string, example: 13.5%}
+        crianza: {type: string, example: Roble 6 meses}
+        notas_cata: {type: string, example: 'Color rubí; nariz a frutos rojos.'}
+        maridaje: {type: string, example: Carnes rojas a la parrilla}
+        ocasiones: {type: array, items: {type: string}, example: [asado]}
+        tags: {type: array, items: {type: string}, example: [frutal, tánico]}
+    CartItem:
+      type: object
+      required: [cve_art, cantidad]
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        cantidad: {type: number, example: 2}
+    CartLine:
+      type: object
+      description: Partida del carrito enriquecida con datos en vivo.
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        cantidad: {type: number, example: 2}
+        nombre: {type: string, example: Malbec Reserva 2021}
+        precio: {type: number, example: 489.0, description: Precio efectivo unitario.}
+        disponible: {type: number, example: 12.0, description: Existencia actual del producto.}
+        importe: {type: number, example: 978.0, description: precio × cantidad.}
+    OrderItem:
+      type: object
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        nombre: {type: string, example: Malbec Reserva 2021}
+        cantidad: {type: number, example: 2}
+        precio: {type: number, example: 489.0, description: Precio unitario al momento de la compra.}
+    EstadoOrden:
+      type: string
+      enum: [pendiente_pago, pagado, preparando, enviado, entregado, cancelado]
+      example: pendiente_pago
+    Orden:
+      type: object
+      properties:
+        id: {type: string, example: ord_a1b2c3d4e5f6a7b8}
+        folio: {type: string, example: MGZ-000042, description: Folio amigable para el cliente.}
+        tipo: {type: string, enum: [b2c, b2b], example: b2c}
+        cliente_id: {type: string, example: '00123', description: Solo pedidos B2B o de cliente registrado.}
+        cliente_nombre: {type: string, example: María Fernanda López}
+        cliente_email: {type: string, example: maria@example.com}
+        cliente_telefono: {type: string, example: '5512345678'}
+        direccion: {type: string, example: Av. Reforma 123, CDMX}
+        items: {type: array, items: {$ref: '#/components/schemas/OrderItem'}}
+        subtotal: {type: number, example: 1458.0}
+        envio: {type: number, example: 150.0}
+        total: {type: number, example: 1608.0}
+        estado: {$ref: '#/components/schemas/EstadoOrden'}
+        referencia_pago: {type: string, example: MENG000042, description: Referencia de transferencia bancaria.}
+        pago_metodo: {type: string, example: transferencia}
+        notas: {type: string, example: Entregar después de las 6 pm}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    PagoTransferencia:
+      type: object
+      description: Datos bancarios para completar el pago del pedido B2C.
+      properties:
+        metodo: {type: string, example: transferencia}
+        referencia: {type: string, example: MENG000042, description: Referencia única a indicar en la transferencia.}
+        banco: {type: string, example: BBVA, description: De la variable BANK_NAME.}
+        clabe: {type: string, example: '000000000000000000', description: De la variable BANK_CLABE.}
+        titular: {type: string, example: Menguz Vinos y Licores SA de CV, description: De la variable BANK_HOLDER.}
+        monto: {type: number, example: 1608.0}
+        instrucciones: {type: string, example: Realiza la transferencia e indica la referencia. Confirmaremos tu pedido en cuánto se refleje el pago.}
+    Cliente:
+      type: object
+      description: Cliente sincronizado desde CLIE01 de SAE; `b2b_pass_hash` nunca se expone en respuestas.
+      properties:
+        id: {type: string, example: '00123', description: Clave SAE (trimmed).}
+        nombre: {type: string, example: Vinatería del Centro}
+        rfc: {type: string, example: VEC123456ABC}
+        email: {type: string, example: vinateria@cliente.mx}
+        telefono: {type: string, example: '5551234567'}
+        calle: {type: string, example: Av. Juárez 45}
+        colonia: {type: string, example: Centro}
+        ciudad: {type: string, example: CDMX}
+        estado: {type: string, example: Ciudad de México}
+        cp: {type: string, example: '06000'}
+        lista_precio: {type: integer, example: 3, description: Lista SAE 1–10.}
+        limite_credito: {type: number, example: 50000.0}
+        saldo: {type: number, example: 12000.0}
+        b2b_enabled: {type: boolean, example: true, description: Acceso al portal B2B habilitado por el admin.}
+        ultima_sync: {type: string, format: date-time}
+    ClienteResumen:
+      type: object
+      description: Cliente con métricas agregadas (lista CRM y miembros de segmento).
+      properties:
+        cliente: {$ref: '#/components/schemas/Cliente'}
+        total_facturado: {type: number, example: 152430.0}
+        ultima_compra: {type: string, format: date-time, nullable: true, example: '2024-04-18T12:00:00Z'}
+        frecuencia_mes: {type: integer, example: 2, description: Compras promedio por mes.}
+        web_orders: {type: integer, example: 3, description: Número de pedidos web (en miembros de segmento se omite y se incluye `segmentos`).}
+        segmentos: {type: array, items: {type: string}, example: [alto_valor, frecuente]}
+    Factura:
+      type: object
+      description: Factura sincronizada desde SAE (FACT01/FACTD01); en la vista 360 se omiten los detalles.
+      properties:
+        id: {type: string, example: FAC-000987}
+        cliente_id: {type: string, example: '00123'}
+        fecha: {type: string, format: date-time}
+        total: {type: number, example: 12500.0}
+        detalles: {type: array, items: {$ref: '#/components/schemas/FacturaDetalle'}}
+    FacturaDetalle:
+      type: object
+      properties:
+        cve_art: {type: string, example: VIN-TIN-001}
+        cant: {type: number, example: 12.0}
+        precio: {type: number, example: 399.0}
+    Customer360:
+      type: object
+      description: Vista unificada del cliente para el CRM (SAE + pedidos web).
+      properties:
+        cliente: {$ref: '#/components/schemas/Cliente'}
+        total_facturado: {type: number, example: 152430.0}
+        ultima_compra: {type: string, format: date-time, nullable: true}
+        web_orders: {type: array, items: {$ref: '#/components/schemas/Orden'}}
+        facturas: {type: array, items: {$ref: '#/components/schemas/Factura'}}
+        frecuencia_mes: {type: integer, example: 2}
+        segmentos: {type: array, items: {type: string}, example: [alto_valor, frecuente, b2b_activo]}
+    Deal:
+      type: object
+      properties:
+        id: {type: string, example: deal_a1b2c3d4e5f6a7b8}
+        cliente_id: {type: string, example: '00123'}
+        titulo: {type: string, example: Renovación anual vinatería Centro}
+        monto: {type: number, example: 85000.0}
+        etapa: {type: string, enum: [nuevo, contactado, propuesta, ganado, perdido], example: propuesta}
+        notas: {type: string, example: Prefiere entregas los jueves.}
+        origen: {type: string, enum: [web, whatsapp, telefono, b2b], example: whatsapp}
+        asignado_a: {type: string, example: admin@menguz.local}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    DealInput:
+      type: object
+      required: [titulo, etapa]
+      properties:
+        cliente_id: {type: string, example: '00123'}
+        titulo: {type: string, minLength: 3, example: Renovación anual vinatería Centro}
+        monto: {type: number, example: 85000.0}
+        etapa: {type: string, enum: [nuevo, contactado, propuesta, ganado, perdido], example: nuevo}
+        notas: {type: string, example: Prefiere entregas los jueves.}
+        origen: {type: string, enum: [web, whatsapp, telefono, b2b], example: web}
+    ChatMessage:
+      type: object
+      properties:
+        role: {type: string, enum: [user, assistant, system], example: user}
+        content: {type: string, example: '¿Tienen Malbec?'}
+        created_at: {type: string, format: date-time}
+    ChatSession:
+      type: object
+      properties:
+        id: {type: string, example: chat_a1b2c3d4e5f6a7b8}
+        canal: {type: string, enum: [web, whatsapp, sommelier], example: web}
+        cliente_tel: {type: string, example: '525512345678', description: Solo sesiones de WhatsApp.}
+        escalado: {type: boolean, example: false, description: Requiere atención humana.}
+        messages: {type: array, items: {$ref: '#/components/schemas/ChatMessage'}}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    SyncLog:
+      type: object
+      description: Entrada de la bitácora de sincronización SAE.
+      properties:
+        id: {type: string, example: sync_a1b2c3d4e5f6a7b8}
+        inicio: {type: string, format: date-time}
+        fin: {type: string, format: date-time}
+        productos: {type: integer, example: 187}
+        clientes: {type: integer, example: 58}
+        facturas: {type: integer, example: 1234}
+        origen: {type: string, enum: [firebird, mock], example: mock}
+        error: {type: string, description: Vacío cuando la sync terminó bien.}
+    TokenResponse:
+      type: object
+      description: Par de tokens emitido en login y refresh; `rol` indica el ámbito del token.
+      properties:
+        access_token: {type: string, example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…}
+        refresh_token: {type: string, example: 9f8e7d6c5b4a3210fedcba9876543210abcdef1234567890abcdef1234567890}
+        token_type: {type: string, example: Bearer}
+        expires_in: {type: integer, example: 900, description: Segundos de vida del access token (15 min por defecto).}
+        rol: {type: string, enum: [admin, ventas, b2b], example: admin}
+    B2BProducto:
+      type: object
+      description: Producto con `precio_cliente` calculado según la lista SAE del cliente B2B.
+      allOf:
+        - $ref: '#/components/schemas/Producto'
+        - type: object
+          properties:
+            precio_cliente: {type: number, example: 399.0}

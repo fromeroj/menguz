@@ -27,6 +27,7 @@ import (
 	"menguz/internal/config"
 	"menguz/internal/models"
 	"menguz/internal/sae"
+	"menguz/internal/sommelier"
 	"menguz/internal/sqlite"
 )
 
@@ -58,6 +59,17 @@ func main() {
 
 	// seed demo campaigns on first boot (so the storefront shows promos)
 	seedCampaigns(srv)
+
+	// seed draft wine profiles on first boot (sommelier enrichment: tipo/uvas
+	// detected from the catalog; admin curation happens in /admin/productos)
+	if n := countPerfiles(st); n == 0 {
+		created, _, err := sommelier.BootstrapDrafts(st)
+		if err != nil {
+			log.Printf("perfiles: bootstrap: %v", err)
+		} else {
+			log.Printf("perfiles: %d fichas borrador generadas", created)
+		}
+	}
 
 	// daily sync: run at boot when stale, then every day at cfg.SyncAt
 	syncNow := func(origen string) {
@@ -128,6 +140,13 @@ func dailyScheduler(at string, fn func()) {
 		time.Sleep(time.Until(next))
 		fn()
 	}
+}
+
+// countPerfiles returns how many wine profiles exist.
+func countPerfiles(st *badger.Store) int {
+	n := 0
+	_ = st.ScanPrefix(badger.PrefPerfilVino, &struct{}{}, func(k string) bool { n++; return false })
+	return n
 }
 
 // seedCampaigns installs three demo campaigns on the very first boot so the

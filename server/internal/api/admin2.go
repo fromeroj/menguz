@@ -186,19 +186,21 @@ func (s *Server) adminProductsPage(c echo.Context) error {
 			<td class="px-4 py-2 text-sm font-mono">%s</td><td class="px-4 py-2 text-sm">%s</td>
 			<td class="px-4 py-2 text-sm">%s</td><td class="px-4 py-2 text-sm">%s</td>
 			<td class="px-4 py-2 text-sm text-right">%s</td><td class="px-4 py-2 text-sm text-right">%s</td>
-			<td class="px-4 py-2 text-sm text-right">`+stock+`</td></tr>`,
+			<td class="px-4 py-2 text-sm text-right">`+stock+`</td>
+			<td class="px-4 py-2 text-sm"><a class="underline text-[#7B1F3A]" href="/admin/productos/%s/perfil">ficha</a></td></tr>`,
 			esc(p.CveArt), esc(p.Nombre), esc(p.Categoria), esc(p.Linea),
-			money(p.PrecioBase), money(p.PrecioLista3), p.Existencia))
+			money(p.PrecioBase), money(p.PrecioLista3), p.Existencia, esc(p.CveArt)))
 	}
 	body := fmt.Sprintf(`
 <h1 class="text-2xl font-bold mb-4">Productos <span class="text-sm font-normal text-neutral-400">(%d, sincronizados de SAE)</span></h1>
-<form class="mb-4" method="get"><input name="q" value="%s" placeholder="buscar por nombre o clave…" class="border rounded-lg px-3 py-2 w-72"></form>
+<form class="mb-4 flex gap-3 items-center" method="get"><input name="q" value="%s" placeholder="buscar por nombre o clave…" class="border rounded-lg px-3 py-2 w-72">
+<button class="border rounded-lg px-3 py-2 text-sm" formmethod="post" formaction="/admin/perfiles/bootstrap" title="Genera fichas de sommelier (tipo, uvas detectadas) para productos sin ficha — no pisa ediciones manuales">⚡ generar fichas borrador</button></form>
 <div class="bg-white rounded-2xl shadow overflow-x-auto">
 <table class="w-full text-left">
 <thead><tr class="text-xs uppercase text-neutral-500">
-<th class="px-4 py-3">Clave</th><th class="px-4 py-3">Producto</th><th class="px-4 py-3">Categoría</th><th class="px-4 py-3">Línea SAE</th><th class="px-4 py-3 text-right">P. lista 1</th><th class="px-4 py-3 text-right">P. lista 3 (B2B)</th><th class="px-4 py-3 text-right">Existencia</th></tr></thead>
+<th class="px-4 py-3">Clave</th><th class="px-4 py-3">Producto</th><th class="px-4 py-3">Categoría</th><th class="px-4 py-3">Línea SAE</th><th class="px-4 py-3 text-right">P. lista 1</th><th class="px-4 py-3 text-right">P. lista 3 (B2B)</th><th class="px-4 py-3 text-right">Existencia</th><th class="px-4 py-3">Sommelier</th></tr></thead>
 <tbody>%s</tbody></table></div>
-<p class="text-xs text-neutral-500 mt-3">Los precios y existencias se actualizan con la sync nocturna de SAE (03:00). Para modificarlos, edita en Aspel SAE.</p>`,
+<p class="text-xs text-neutral-500 mt-3">Los precios y existencias se actualizan con la sync nocturna de SAE (03:00). Para modificarlos, edita en Aspel SAE. La <b>ficha</b> alimenta al Sommelier IA (uvas, notas, maridaje) y se conserva entre syncs.</p>`,
 		len(prods), esc(c.QueryParam("q")), strings.Join(rows, "\n"))
 	return c.HTML(http.StatusOK, layout("Productos", "/admin/productos", body))
 }

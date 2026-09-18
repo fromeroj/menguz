@@ -37,6 +37,29 @@ type PublicProductJSON struct {
 	I string  `json:"i"`
 }
 
+// ---------- PerfilVino (sommelier enrichment, admin-curated) ----------
+// SAE sync provides price/stock; the wine profile adds the sensorial and
+// editorial layer the sommelier IA reasons over: grape, producer, region,
+// tasting notes, pairing and occasion tags.
+
+type PerfilVino struct {
+	CveArt      string    `json:"cve_art"`     // SAE article key
+	Tipo        string    `json:"tipo"`        // Tinto | Blanco | Rosado | Espumoso | Champagne | Licor | Otro
+	Uvas        []string  `json:"uvas"`        // varietals, e.g. ["Malbec", "Cabernet Sauvignon"]
+	Bodega      string    `json:"bodega"`      // producer / winery
+	Region      string    `json:"region"`      // e.g. "Valle de Guadalupe", "Rioja"
+	Pais        string    `json:"pais"`        // e.g. "México", "España", "Francia"
+	Anada       string    `json:"anada"`       // vintage, e.g. "2021"; "" = sin añada (NV)
+	Graduacion  string    `json:"graduacion"`  // e.g. "13.5%"
+	Crianza     string    `json:"crianza"`     // e.g. "Roble 6 meses", "Reserva 24 meses"
+	NotasCata   string    `json:"notas_cata"`  // tasting notes
+	Maridaje    string    `json:"maridaje"`    // food pairing
+	Descripcion string    `json:"descripcion"` // long editorial description
+	Ocasiones   []string  `json:"ocasiones"`   // regalo, cena romántica, celebración, asado, verano, digestivo...
+	Tags        []string  `json:"tags"`        // free-form: frutal, afrutado, seco, dulce, tánico, añejo, artesanal
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 // ---------- Cliente (from SAE CLIE01) ----------
 
 type Cliente struct {

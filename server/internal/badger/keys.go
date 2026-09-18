@@ -15,6 +15,7 @@ package badger
 //	deal:{id}                       -> Deal JSON
 //	chat_sess:{id}                  -> ChatSession JSON
 //	chat_idx:{yyyymm}               -> chat session id list (newline separated)
+//	perfil_vino:{cve_art}           -> PerfilVino JSON (sommelier enrichment)
 //	sync_log:{ts}                   -> SyncLog JSON
 //	meta:{k}                        -> misc metadata (last_sync, seq:folio...)
 const (
@@ -31,6 +32,7 @@ const (
 	PrefDeal         = "deal:"
 	PrefChatSess     = "chat_sess:"
 	PrefChatIdx      = "chat_idx:"
+	PrefPerfilVino   = "perfil_vino:"
 	PrefSyncLog      = "sync_log:"
 	PrefMeta         = "meta:"
 )

@@ -28,6 +28,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* offset anchored sections below the fixed header */
+section[id],
+footer[id] {
+  scroll-margin-top: 84px;
+}
+
 body {
   font-family: 'Archivo', system-ui, sans-serif;
   background: var(--cellar);

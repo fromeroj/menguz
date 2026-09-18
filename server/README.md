@@ -15,6 +15,10 @@ Implementa los **meses 1–3** de la propuesta de Transformación Digital
 | M2 | **WhatsApp Business API** (webhook de verificación + recepción, respuesta automática) | ✅ |
 | M2/M3 | **Portal B2B** con precios por lista de SAE (listas 1/2/3), pedidos masivos, historial | ✅ |
 | M3 | **CRM base**: pipeline de ventas, vista 360° del cliente, segmentación, exportación CSV | ✅ |
+| M3+ | **Sommelier Digital** (estilo Hedonism): asesor conversacional con **DeepSeek** + tools sobre el inventario vivo; fichas de vino curadas (uvas, notas, maridaje, ocasiones) | ✅ |
+| M3+ | **API documentada**: OpenAPI 3.0 + Swagger UI en `/docs` | ✅ |
+
+> Sitio creado por **Darkvoice Center** — https://darkvoice.center/
 
 ## Arquitectura
 
@@ -60,6 +64,22 @@ primer arranque (aparecen en el log como `admin_bootstrapped`).
 - **CRM**: pipeline, top clientes, segmentos, exportación CSV, vista 360°.
 - **Chat**: revisión de conversaciones y escalaciones.
 - **Sync**: bitácora de sincronizaciones y ejecución manual.
+- **Fichas de sommelier** (en Productos → "ficha"): uvas, bodega, región, añada, crianza, notas de cata, maridaje, ocasiones y tags por producto. Alimentan al Sommelier Digital. El botón "⚡ generar fichas borrador" detecta tipo y varietales desde el catálogo sin pisar ediciones manuales.
+
+## Sommelier Digital
+
+Asesor de vinos conversacional (sección `#sommelier` del storefront), inspirado en el asesor de hedonism.co.uk. Configuración:
+
+```bash
+DEEPSEEK_API_KEY=sk-...        # vacío → motor determinista de respaldo
+DEEPSEEK_MODEL=deepseek-chat   # default
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+- El modelo razona **solo sobre datos reales**: dos tools (`buscar_vinos`, `ficha_vino`) consultan precios/existencias del sync nocturna y las fichas curadas. Precios y stock nunca se inventan (guardrails en el system prompt).
+- Respuesta en **SSE**: `session` → `delta*` → `products` (tarjetas con imagen/precio/existencia) → `done`.
+- Las conversaciones se guardan como sesiones `canal=sommelier` y aparecen en el Chat del panel.
+- **Documentación interactiva**: Swagger UI en `/docs` (spec OpenAPI 3.0 en `/openapi.yaml` y `server/api/openapi.yaml`).
 
 ## API principal
 
@@ -72,6 +92,9 @@ primer arranque (aparecen en el log como `admin_bootstrapped`).
 | `POST /api/checkout` | Crea pedido con **referencia bancaria única** |
 | `GET /api/orders/lookup?folio=&email=` | Rastreo de pedido |
 | `POST /api/chat` | Chatbot (SSE) |
+| `POST /api/sommelier/chat` | Sommelier Digital (SSE + tarjetas de producto) |
+| `GET /api/products/{cve}/perfil` | Ficha de vino curada (uvas, notas, maridaje) |
+| `GET /docs` · `GET /openapi.yaml` | Swagger UI + spec OpenAPI |
 | `POST /api/b2b/login` · `GET /api/b2b/catalog` · `POST /api/b2b/orders` | Portal mayorista |
 | `POST /api/auth/login` · `POST /api/auth/refresh` | Autenticación admin |
 | `GET/POST /api/admin/*` | CRUD admin (JWT) |

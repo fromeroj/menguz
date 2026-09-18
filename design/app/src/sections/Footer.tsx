@@ -85,6 +85,12 @@ export default function Footer() {
             <a href="#contacto" className="link-line">Términos y Condiciones</a>
             <a href="#contacto" className="link-line">Política de Privacidad</a>
           </p>
+          <p>
+            Creado por{' '}
+            <a href="https://darkvoice.center/" target="_blank" rel="noreferrer" className="link-line">
+              Darkvoice Center
+            </a>
+          </p>
         </div>
       </div>
     </footer>

@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"menguz/internal/docs"
 	"menguz/internal/middleware"
 )
 
@@ -19,8 +20,12 @@ func (s *Server) routes() {
 	e.GET("/data/products.json", s.dataProductsJSON)
 	e.GET("/api/products", s.listProducts)
 	e.GET("/api/products/:cve", s.getProduct)
+	e.GET("/api/products/:cve/perfil", s.publicPerfil)
 	e.GET("/api/categories", s.listCategories)
 	e.GET("/api/promos", s.activePromos)
+
+	// sommelier (Hedonism-style wine advisor; DeepSeek + live inventory)
+	e.POST("/api/sommelier/chat", s.sommelierChatHandler)
 
 	// cart & checkout (bank-transfer reference, per proposal PDF)
 	e.GET("/api/cart", s.getCart)
@@ -57,6 +62,9 @@ func (s *Server) routes() {
 	admin.POST("/clients/:id/b2b", s.adminSetB2B)
 	admin.POST("/sync", s.adminTriggerSync)
 	admin.GET("/sync/logs", s.adminSyncLogs)
+	admin.GET("/products/:cve/perfil", s.adminGetPerfil)
+	admin.PUT("/products/:cve/perfil", s.adminSavePerfil)
+	admin.POST("/perfiles/bootstrap", s.adminBootstrapPerfiles)
 	admin.GET("/chat/sessions", s.adminListChatSessions)
 	admin.GET("/chat/sessions/:id", s.adminGetChatSession)
 	admin.POST("/chat/sessions/:id/resolve", s.adminResolveChatSession)
@@ -96,6 +104,9 @@ func (s *Server) routes() {
 	web.GET("/pedidos/:id", s.adminOrderDetail)
 	web.POST("/pedidos/:id/estado", s.adminOrderStatus)
 	web.GET("/productos", s.adminProductsPage)
+	web.GET("/productos/:cve/perfil", s.adminPerfilForm)
+	web.POST("/productos/:cve/perfil/guardar", s.adminPerfilSave)
+	web.POST("/perfiles/bootstrap", s.adminPerfilBootstrap)
 	web.GET("/clientes", s.adminClientsPage)
 	web.POST("/clientes/:id/b2b", s.adminClientB2B)
 	web.GET("/crm", s.adminCRMPage)
@@ -105,6 +116,11 @@ func (s *Server) routes() {
 	web.GET("/chat", s.adminChatPage)
 	web.POST("/sync", s.adminSyncNow)
 	web.GET("/sync-logs", s.adminSyncLogsPage)
+
+	// ---------- API docs (Swagger UI + OpenAPI embebidos) ----------
+	e.GET("/docs", docs.SwaggerUIHandler())
+	e.GET("/docs/*", docs.SwaggerUIHandler())
+	e.GET("/openapi.yaml", docs.SpecHandler())
 
 	// ---------- static storefront (React build) ----------
 	e.GET("/admin/", func(c echo.Context) error { return c.Redirect(http.StatusMovedPermanently, "/admin") })

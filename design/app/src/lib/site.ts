@@ -78,6 +78,7 @@ export const NAV_LINKS = [
   { label: 'Promociones', href: '#promociones' },
   { label: 'Especiales', href: '#especiales' },
   { label: 'Producto del mes', href: '#destacado' },
+  { label: 'Sommelier', href: '#sommelier' },
   { label: 'Catálogo', href: '#catalogo' },
   { label: 'Eventos', href: '#eventos' },
   { label: 'Contacto', href: '#contacto' },

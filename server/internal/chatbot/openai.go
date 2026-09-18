@@ -16,15 +16,25 @@ import (
 
 // OpenAIClient streams chat completions over SSE (server-sent events).
 // Hand-rolled to avoid SDK weight; only chat.completions is used.
+// BaseURL is configurable: any OpenAI-compatible endpoint works
+// (OpenAI, DeepSeek https://api.deepseek.com, local proxies...).
 type OpenAIClient struct {
-	APIKey string
-	Model  string
-	Client *http.Client
+	APIKey  string
+	Model   string
+	BaseURL string // e.g. https://api.openai.com or https://api.deepseek.com
+	Client  *http.Client
 }
 
 func NewOpenAIClient(key, model string) *OpenAIClient {
+	return NewOpenAIClientWithBaseURL(key, model, "https://api.openai.com")
+}
+
+func NewOpenAIClientWithBaseURL(key, model, baseURL string) *OpenAIClient {
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+	}
 	return &OpenAIClient{
-		APIKey: key, Model: model,
+		APIKey: key, Model: model, BaseURL: strings.TrimRight(baseURL, "/"),
 		Client: &http.Client{Timeout: 60 * time.Second},
 	}
 }
@@ -51,7 +61,7 @@ func (o *OpenAIClient) Stream(ctx context.Context, system string, history []mode
 		"temperature": 0.3,
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://api.openai.com/v1/chat/completions", bytes.NewReader(body))
+		o.BaseURL+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}

@@ -46,6 +46,11 @@ type Config struct {
 	// OpenAI chatbot
 	OpenAIKey   string
 	OpenAIModel string
+
+	// DeepSeek sommelier (Hedonism-style wine advisor; OpenAI-compatible API)
+	DeepSeekKey     string
+	DeepSeekModel   string
+	DeepSeekBaseURL string
 }
 
 func getenv(key, def string) string {
@@ -88,6 +93,10 @@ func parse() *Config {
 
 	fs.StringVar(&c.OpenAIKey, "openai-key", getenv("OPENAI_API_KEY", ""), "OpenAI API key (empty → rule-based chatbot fallback)")
 	fs.StringVar(&c.OpenAIModel, "openai-model", getenv("OPENAI_MODEL", "gpt-4o-mini"), "OpenAI chat model")
+
+	fs.StringVar(&c.DeepSeekKey, "deepseek-key", getenv("DEEPSEEK_API_KEY", ""), "DeepSeek API key for the sommelier (empty → rule-based sommelier fallback)")
+	fs.StringVar(&c.DeepSeekModel, "deepseek-model", getenv("DEEPSEEK_MODEL", "deepseek-chat"), "DeepSeek chat model")
+	fs.StringVar(&c.DeepSeekBaseURL, "deepseek-base-url", getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"), "DeepSeek API base URL")
 	_ = fs.Parse(os.Args[1:])
 
 	c.CORSOrigins = []string{} // same-origin by default; extend via CORS_ORIGINS="a,b"
