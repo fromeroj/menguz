@@ -10,7 +10,7 @@ import Catalogo from '@/sections/Catalogo'
 import Eventos from '@/sections/Eventos'
 import Mayorista from '@/sections/Mayorista'
 import Footer from '@/sections/Footer'
-import WhatsAppFab from '@/sections/WhatsAppFab'
+import SommelierChat from '@/components/SommelierChat'
 
 export default function Home() {
   return (
@@ -27,7 +27,8 @@ export default function Home() {
       <Eventos />
       <Mayorista />
       <Footer />
-      <WhatsAppFab />
+      {/* floating sommelier chat (replaces the WhatsApp FAB for now) */}
+      <SommelierChat />
     </main>
   )
 }
