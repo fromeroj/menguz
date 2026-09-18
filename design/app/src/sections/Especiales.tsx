@@ -27,12 +27,22 @@ const waProduct = (name: string) =>
     `Hola, me interesa ${name}. ¿Me pueden cotizar?`,
   )}`
 
+/** Windowed page list: 1 … p-1 p p+1 … last, collapsing gaps to an ellipsis. */
+function pageWindow(page: number, total: number): (number | '…')[] {
+  const out: (number | '…')[] = []
+  for (let i = 1; i <= total; i++) {
+    const v: number | '…' = i === 1 || i === total || Math.abs(i - page) <= 1 ? i : '…'
+    if (out[out.length - 1] !== v) out.push(v)
+  }
+  return out
+}
+
 export default function Especiales() {
   const [items, setItems] = useState<Product[]>([])
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState('Todos')
-  const [limit, setLimit] = useState(PAGE)
-  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [page, setPage] = useState(1)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   /* load catalog on first scroll into the section */
   const sectionRef = useRef<HTMLElement>(null)
@@ -82,31 +92,27 @@ export default function Especiales() {
     )
   }, [items, query, cat])
 
-  const visible = filtered.slice(0, limit)
-
-  /* infinite scroll */
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setLimit((l) => (l < filtered.length ? l + PAGE : l))
-        }
-      },
-      { rootMargin: '800px' },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [filtered.length])
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE))
+  const safePage = Math.min(page, totalPages)
+  const visible = filtered.slice((safePage - 1) * PAGE, safePage * PAGE)
+  const first = (safePage - 1) * PAGE + 1
+  const last = Math.min(safePage * PAGE, filtered.length)
 
   /* reset pagination when filters change */
   useEffect(() => {
-    setLimit(PAGE)
+    setPage(1)
   }, [query, cat])
 
+  const goToPage = (p: number) => {
+    const target = Math.min(Math.max(1, p), totalPages)
+    setPage(target)
+    requestAnimationFrame(() =>
+      gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    )
+  }
+
   return (
-    <section id="especiales" ref={sectionRef} className="bg-[var(--cream)] pb-20 text-[var(--ink)] md:pb-28">
+    <section id="especiales" ref={sectionRef} className="bg-white pb-20 text-[var(--ink)] md:pb-28">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         <div className="md:flex md:items-end md:justify-between md:gap-12">
           <div>
@@ -133,7 +139,7 @@ export default function Especiales() {
       </div>
 
       {/* sticky toolbar: search + category chips */}
-      <div className="sticky top-[68px] z-30 mt-10 border-y border-[var(--ink)]/10 bg-[var(--cream)]/95 backdrop-blur-md md:top-[80px]">
+      <div className="sticky top-[68px] z-30 mt-10 border-y border-[var(--ink)]/10 bg-white/95 backdrop-blur-md md:top-[80px]">
         <div className="mx-auto max-w-7xl px-5 py-3 md:px-10">
           <div className="flex items-center gap-3">
             <input
@@ -176,7 +182,10 @@ export default function Especiales() {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div
+              ref={gridRef}
+              className="grid scroll-mt-[150px] grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:scroll-mt-[160px] lg:grid-cols-4 xl:grid-cols-5"
+            >
               {visible.map((p) => (
                 <article key={p.i} className="group flex flex-col">
                   <div className="relative mb-3 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl bg-white p-4 shadow-[0_1px_2px_rgba(30,26,22,0.06)] transition-shadow duration-300 group-hover:shadow-[0_10px_28px_rgba(30,26,22,0.12)]">
@@ -212,15 +221,54 @@ export default function Especiales() {
               ))}
             </div>
 
-            {limit < filtered.length && (
-              <div ref={sentinelRef} className="flex justify-center pt-10">
-                <button
-                  onClick={() => setLimit((l) => l + PAGE)}
-                  className="rounded-full border border-[var(--ink)]/25 px-8 py-3.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--ink)] transition-colors hover:border-[var(--wine)] hover:text-[var(--wine)]"
-                >
-                  Ver más ({filtered.length - limit} restantes)
-                </button>
-              </div>
+            {filtered.length > 0 && (
+              <nav aria-label="Paginación del catálogo" className="mt-12 flex flex-col items-center gap-4">
+                <p className="text-[13px] text-[var(--ink)]/55">
+                  Mostrando {first}–{last} de {filtered.length} productos
+                  {totalPages > 1 ? ` · página ${safePage} de ${totalPages}` : ''}
+                </p>
+                {totalPages > 1 && (
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <button
+                    onClick={() => goToPage(safePage - 1)}
+                    disabled={safePage === 1}
+                    aria-label="Página anterior"
+                    className="flex h-10 items-center rounded-full border border-[var(--ink)]/25 px-4 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink)] transition-colors enabled:hover:border-[var(--wine)] enabled:hover:text-[var(--wine)] disabled:opacity-30"
+                  >
+                    ← Ant.
+                  </button>
+                  {pageWindow(safePage, totalPages).map((p, i) =>
+                    p === '…' ? (
+                      <span key={`e${i}`} className="px-1 text-[var(--ink)]/40">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => goToPage(p)}
+                        aria-current={p === safePage ? 'page' : undefined}
+                        aria-label={`Ir a la página ${p}`}
+                        className={`h-10 min-w-10 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
+                          p === safePage
+                            ? 'border-[var(--wine)] bg-[var(--wine)] text-[var(--cream)]'
+                            : 'border-[var(--ink)]/25 text-[var(--ink)] hover:border-[var(--wine)] hover:text-[var(--wine)]'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() => goToPage(safePage + 1)}
+                    disabled={safePage === totalPages}
+                    aria-label="Página siguiente"
+                    className="flex h-10 items-center rounded-full border border-[var(--ink)]/25 px-4 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--ink)] transition-colors enabled:hover:border-[var(--wine)] enabled:hover:text-[var(--wine)] disabled:opacity-30"
+                  >
+                    Sig. →
+                  </button>
+                </div>
+                )}
+              </nav>
             )}
           </>
         )}

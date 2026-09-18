@@ -240,7 +240,7 @@ export default function Sommelier() {
   }
 
   return (
-    <section id="sommelier" className="bg-[var(--cream)] py-20 text-[var(--ink)] md:py-32">
+    <section id="sommelier" className="bg-white py-20 text-[var(--ink)] md:py-32">
       <div className="mx-auto max-w-7xl px-5 md:px-10">
         {/* intro */}
         <div className="md:flex md:items-end md:justify-between md:gap-12">
