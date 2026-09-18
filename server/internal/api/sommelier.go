@@ -95,6 +95,9 @@ func (s *Server) sommelierChatHandler(c echo.Context) error {
 
 	final := []sommelier.Recomendacion{}
 	for _, k := range order {
+		if len(final) >= 12 { // cap the card carousel; the model already ranked them
+			break
+		}
 		final = append(final, recs[k])
 	}
 	if len(final) > 0 {
