@@ -9,7 +9,7 @@ interface Product {
   i: string // image path
 }
 
-const PAGE = 24
+const PAGE = 10
 
 const fmt = (p: number) =>
   `$${p.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
