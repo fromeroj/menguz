@@ -14,7 +14,10 @@ function ChatPreview() {
           <p className="font-display text-sm uppercase tracking-[0.14em] text-[var(--cream)]">
             Sofía · Sommelier
           </p>
-          <p className="text-[11px] text-[var(--cream)]/55">En línea · inventario real</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-[var(--cream)]/55">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
+            En línea · inventario real
+          </p>
         </div>
         <span className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-[var(--cream)]/50">
           <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>

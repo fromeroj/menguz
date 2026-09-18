@@ -266,7 +266,7 @@ export default function SommelierChat() {
         aria-label={open ? 'Cerrar chat con la sommelier' : 'Abrir chat con la sommelier'}
         aria-expanded={open}
         data-testid="sommelier-launcher"
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wine)] text-[var(--cream)] shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-110 active:scale-95 md:bottom-8 md:right-8 md:h-16 md:w-16"
+        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--wine)] text-[var(--cream)] shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition-transform duration-300 hover:scale-110 active:scale-95 md:bottom-8 md:right-8 md:h-16 md:w-16 relative"
       >
         {open ? (
           <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden>
@@ -277,6 +277,10 @@ export default function SommelierChat() {
             <path d="M8.1 13.34c.13-.32.22-.65.28-.99-.06-.34-.15-.67-.28-.99-.38-.91-.28-2 .27-2.83.48-.72 1.26-1.16 2.09-1.23.83-.07 1.66.23 2.24.83.53.55.82 1.28.8 2.03-.02.75-.34 1.46-.88 1.98-.58.56-1.35.87-2.15.86-.8-.01-1.56-.33-2.14-.9l-.01-.01c-.33-.3-.6-.66-.8-1.07-.04 0-.07-.01-.11-.02-.15.35-.35.68-.6.98zm7.8 6.16c1.05.51 2.25.42 3.22-.24.88-.6 1.42-1.58 1.42-2.63 0-.97-.45-1.89-1.23-2.49-.35-.27-.74-.44-1.16-.5-.11-.02-.23-.02-.34 0 .07.23.12.47.15.71.02.2.03.4.02.6.03 1.51-.68 2.96-1.9 3.89-.24.18-.5.34-.77.46.12.14.25.27.4.38.67.52 1.49.8 2.33.8.24 0 .48-.03.71-.08.14-.03.28-.07.42-.11-.01-.04-.02-.08-.04-.11-.49-.09-.95-.31-1.32-.66l-.63.49zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
           </svg>
         )}
+        <span className="absolute right-0 top-0 flex h-3.5 w-3.5" aria-hidden>
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-green-500 ring-2 ring-white" />
+        </span>
       </button>
 
       {/* chat window */}
@@ -298,7 +302,8 @@ export default function SommelierChat() {
               <p className="font-display text-sm uppercase tracking-[0.14em] text-[var(--cream)]">
                 Sofía · Sommelier
               </p>
-              <p className="text-[11px] text-[var(--cream)]/55">
+              <p className="flex items-center gap-1.5 text-[11px] text-[var(--cream)]/55">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
                 En línea · recomienda del inventario real
               </p>
             </div>
@@ -349,13 +354,13 @@ export default function SommelierChat() {
 
           {/* quick prompts — legible at rest: cream border/text on dark panel */}
           {!started && (
-            <div className="no-scrollbar relative flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3">
+            <div className="relative flex flex-wrap gap-2 border-t border-white/10 px-4 py-3">
               {CHIPS.map((c) => (
                 <button
                   key={c}
                   onClick={() => void send(c)}
                   disabled={streaming}
-                  className="shrink-0 rounded-full border border-[var(--cream)]/40 bg-white/5 px-4 py-2 text-[12px] font-medium text-[var(--cream)] transition-colors hover:border-[var(--gold)] hover:bg-white/10 hover:text-[var(--gold)] disabled:opacity-40"
+                  className="rounded-full border border-[var(--cream)]/40 bg-white/5 px-4 py-2 text-[12px] font-medium text-[var(--cream)] transition-colors hover:border-[var(--gold)] hover:bg-white/10 hover:text-[var(--gold)] disabled:opacity-40"
                 >
                   {c}
                 </button>
