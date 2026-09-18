@@ -150,9 +150,17 @@ func (r *RateLimiter) Allow(key string) bool {
 }
 
 // Limit middleware: per-IP global bucket. Use tighter buckets on checkout/chat.
+// Static storefront assets (images/JS/CSS under the catch-all route) are
+// exempt — a product grid can fire hundreds of asset requests per page view
+// and must not consume the API budget.
 func (r *RateLimiter) Limit() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			p := c.Request().URL.Path
+			limited := strings.HasPrefix(p, "/api") || strings.HasPrefix(p, "/webhooks") || strings.HasPrefix(p, "/admin") || strings.HasPrefix(p, "/data")
+			if !limited {
+				return next(c)
+			}
 			ip := c.RealIP()
 			if !r.Allow(ip) {
 				return echo.NewHTTPError(http.StatusTooManyRequests, "demasiadas solicitudes, intenta más tarde")

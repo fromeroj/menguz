@@ -35,6 +35,7 @@ type ProductoRow struct {
 	Origen     string
 	NotasCata  string
 	Estatus    string // "A" activo
+	Imagen     string // storefront image path (e.g. products/abc.jpg)
 }
 
 // ClienteRow mirrors the CLIE01 extraction.

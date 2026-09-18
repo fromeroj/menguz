@@ -1,9 +1,12 @@
 package sae
 
 import (
+	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	"menguz/internal/models"
@@ -14,6 +17,10 @@ import (
 // whole platform (storefront, B2B, CRM, chatbot) can run before the real
 // Firebird credentials are available. Enabled with -sae-mock=true (default)
 // or when -sae-host is empty.
+//
+// If MOCK_CATALOG (or the default path) points to a products.json export in
+// the storefront shape [{n,p,c,g,i}], the mock sync uses those real products
+// (names, prices, categories and photos) instead of the generated catalog.
 type MockSource struct {
 	rnd *rand.Rand
 }
@@ -23,6 +30,79 @@ func NewMockSource() *MockSource {
 }
 
 func (m *MockSource) Close() error { return nil }
+
+// fromCatalogFile loads a storefront products.json export (n,p,c,g,i) and
+// converts it to product rows with stable claves and B2B price lists.
+func (m *MockSource) fromCatalogFile() ([]ProductoRow, error) {
+	path := os.Getenv("MOCK_CATALOG")
+	if path == "" {
+		path = "../design/app/public/data/products.json"
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var items []struct {
+		N string  `json:"n"`
+		P float64 `json:"p"`
+		C string  `json:"c"`
+		G string  `json:"g"`
+		I string  `json:"i"`
+	}
+	if err := json.Unmarshal(b, &items); err != nil {
+		return nil, err
+	}
+	rows := make([]ProductoRow, 0, len(items))
+	for _, it := range items {
+		if it.N == "" {
+			continue
+		}
+		h := fnv.New32a()
+		_, _ = h.Write([]byte(it.N))
+		cve := fmt.Sprintf("MOCK-%08X", h.Sum32())
+		p1 := it.P
+		var p2, p3 float64
+		if p1 > 1 { // p<=1 means "a cotizar" (quote only) in the storefront
+			p2 = round2(p1 * 0.95)
+			p3 = round2(p1 * 0.90)
+		}
+		linea := reverseLinea(it.C, it.G)
+		rows = append(rows, ProductoRow{
+			CveArt: cve, Nombre: it.N, Descr: it.C,
+			Linea: linea, Unidad: "PZ", Exist: float64(3 + m.rnd.Intn(48)),
+			Precio1: p1, Precio2: p2, Precio3: p3,
+			Graduacion: "", Origen: "", NotasCata: "",
+			Estatus: "A", Imagen: it.I,
+		})
+	}
+	return rows, nil
+}
+
+// reverseLinea approximates a SAE line code from the storefront category.
+func reverseLinea(cat, grupo string) string {
+	for linea, m := range lineaMap {
+		if m[0] == cat {
+			return linea
+		}
+	}
+	switch grupo {
+	case "Vinos":
+		return "VIN-TIN"
+	case "Mezcladores":
+		return "MEZ-REF"
+	case "Abarrotes":
+		return "ABA-GRAL"
+	default:
+		return "LIC-CRE"
+	}
+}
+
+func (m *MockSource) Productos() ([]ProductoRow, error) {
+	if rows, err := m.fromCatalogFile(); err == nil && len(rows) > 0 {
+		return rows, nil
+	}
+	return m.generatedProductos()
+}
 
 var mockCatalog = []struct {
 	cve, nombre, linea, um, grad, origen, notas string
@@ -78,7 +158,7 @@ var mockClientes = []ClienteRow{
 	{Clave: "C0005", Nombre: "Cantina La Última y Nos Vamos", RFC: "CLU140728KR1", Calle: "Av. Cuauhtémoc 810", Colonia: "Doctores", Ciudad: "CDMX", Estado: "CDMX", CP: "06720", Telefono: "55 5762 8834", Email: "encargado@laultima.mx", ListaPrec: 3, LimiteCred: 25000, Saldo: 1900},
 }
 
-func (m *MockSource) Productos() ([]ProductoRow, error) {
+func (m *MockSource) generatedProductos() ([]ProductoRow, error) {
 	out := make([]ProductoRow, 0, len(mockCatalog)*3)
 	for rep := 0; rep < 3; rep++ {
 		for _, p := range mockCatalog {

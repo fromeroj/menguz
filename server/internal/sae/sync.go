@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"menguz/internal/badger"
@@ -31,6 +32,17 @@ func NewSource(cfg *config.Config) (Source, string, error) {
 		return src, "firebird", nil
 	}
 	return NewMockSource(), "mock", nil
+}
+
+// imageURL normalizes a storefront image path to an absolute URL path.
+func imageURL(p string) string {
+	if p == "" {
+		return ""
+	}
+	if strings.HasPrefix(p, "/") || strings.HasPrefix(p, "http") {
+		return p
+	}
+	return "/" + p
 }
 
 // Sync runs the full nightly pipeline: backup → extract → load Badger →
@@ -103,7 +115,8 @@ func Sync(cfg *config.Config, st *badger.Store, ana *sqlite.DB) (*models.SyncLog
 			Existencia: r.Exist, UnidadMedida: r.Unidad,
 			Linea: r.Linea, Categoria: cat, Grupo: grupo,
 			Graduacion: r.Graduacion, Origen: r.Origen, NotasCata: r.NotasCata,
-			Activo: r.Estatus != "B", UltimaSync: now,
+			ImagenURL: imageURL(r.Imagen),
+			Activo:    r.Estatus != "B", UltimaSync: now,
 		}
 		if b, err := json.Marshal(p); err == nil {
 			_ = wb.Set([]byte(badger.PrefProducto+p.CveArt), b)

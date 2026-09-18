@@ -26,7 +26,10 @@ func (s *Server) dataProductsJSON(c echo.Context) error {
 				price = p.PrecioOferta
 			}
 			out = append(out, models.PublicProductJSON{
-				N: p.Nombre, P: price, C: p.Categoria, G: p.Grupo, I: p.ImagenURL,
+				// The storefront templates build src={`/${p.i}`}, so the image
+				// field must NOT carry a leading slash (it would turn into the
+				// protocol-relative URL //products/... and get blocked by CSP).
+				N: p.Nombre, P: price, C: p.Categoria, G: p.Grupo, I: strings.TrimPrefix(p.ImagenURL, "/"),
 			})
 		}
 		return true
